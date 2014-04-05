@@ -1,0 +1,63 @@
+\documentclass[11pt]{article}   
+
+\usepackage{geometry}                		% See geometry.pdf to learn the
+\usepackage{fixltx2e}
+\geometry{letterpaper}                   		% ... or a4paper or
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{color}
+\usepackage{subfigure}
+\usepackage[font={bf,small},labelsep=colon]{caption}
+
+% \usepackage{times} % Use Times Font (appear line fonts in MS Word)
+%\usepackage{mathptmx}
+
+%\usepackage[parfill]{parskip}    		
+% Activate to begin paragraphs with an empty line rather than an indent 
+
+\usepackage{graphicx}				% Use pdf, png, jpg, or eps§
+\usepackage{caption}
+\usepackage{hyperref}
+
+\geometry{
+  body={6.5in, 9.0in},
+  left=1.0in,
+  top=1.0in
+}
+
+
+\renewcommand{\baselinestretch}{1}
+
+\title{Eulerian--Lagrangian Modeling of Current-Induced Coastal Sand Dune Migration}
+
+\author{Rui Sun \and Heng Xiao}
+
+\date{\today}
+\begin{document}
+
+\maketitle
+
+\section{Validation cases}
+
+Several numerical example cases are presented in this section as the validation of lammpsFoam. In
+Case 1, a sand bed is fluidized by airflow in the upward direction with a gradually increasing and
+decreasing velocity, aiming at capturing the fluidized velocity and pressure drop. In Case 2, a
+similar simulation is performed with Case 1, but the fluidized bed is made of Perspex and the
+airflow velocity is constant. The volume fraction of the fluid and the time-averaged Eulerian
+velocity of particles are presented in this case.
+
+\subsection{Case 1: fluidized bed with constant air flow velocity}
+
+The configuration of this case is similar with the one used by Xiao et
+al.~\cite{xiao_algorithms_2011}
+
+\subsection{Case 2: fluidized bed with oscillating air flow velocity}
+
+The configuration of this case is similar with the one used by Mueller et
+al.~\cite{muller_validation_2009}
+
+\subsection{Code validation part}
+
+In this part, the results of different versions of code are compared to see if the modification of
+the code makes any sense.
+

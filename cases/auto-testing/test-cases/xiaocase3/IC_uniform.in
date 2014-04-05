@@ -1,0 +1,12 @@
+ Granular Flow simulation
+
+           1  atoms
+           1  atom types
+
+   0.000000      4.0E-03  xlo xhi
+   0.000000      4.0E-03  ylo yhi
+   0.000000      5.0E-04  zlo zhi
+
+ Atoms
+
+     1   1 8.30000E-05  2.00000E+03  2.00000E-03  1.90000E-03  2.50000E-04

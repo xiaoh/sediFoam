@@ -1,0 +1,246 @@
+/*---------------------------------------------------------------------------* \
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     |
+    \\  /    A nd           | Copyright (C) 1991-2005 OpenCFD Ltd.
+     \\/     M anipulation  |
+-------------------------------------------------------------------------------
+License
+    This file is based on OpenFOAM.
+
+    OpenFOAM is free software; you can redistribute it and/or modify it
+    under the terms of the GNU General Public License as published by the
+    Free Software Foundation; either version 2 of the License, or (at your
+    option) any later version.
+
+    OpenFOAM is distributed in the hope that it will be useful, but WITHOUT
+    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+    FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+    for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with OpenFOAM; if not, write to the Free Software Foundation,
+    Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+
+Class
+    enhancedCloud
+
+Description
+    softParticleCloud with averaging features (via meshForWeighting)
+    and dragModel
+
+SourceFiles
+    enhancedCloud.C
+
+\*---------------------------------------------------------------------------*/
+
+#ifndef enhancedCloud_H
+#define enhancedCloud_H
+
+#include "softParticle.H"
+#include "softParticleCloud.H"
+#include "meshForWeighting.H"
+#include "dragModel.H"
+#include "vectorList.H"
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+namespace Foam
+{
+
+/*---------------------------------------------------------------------------*\
+                            Class template Declaration
+\*---------------------------------------------------------------------------*/
+
+class enhancedCloud
+:
+    public softParticleCloud,
+    public meshForWeighting
+{
+    // Private data
+
+        //- Mesh
+        const fvMesh& mesh_;
+
+        //- Fluid velocity
+        const volVectorField& Uf_;
+
+        //- box-car flag
+        bool boxCar_;
+
+        //- Normalized weight list
+        mutable scalarListList* weightPtr_;
+
+        //- Particle cell list (associated cell and it neighbors)
+        mutable labelListList* particleCellPtr_;
+
+        //- Number of particles as remembered by weight operations
+        label particleCount_;
+
+        //- List of alpha corresponding to each particle
+        scalarField pAlpha_;
+
+        //- List of particle diameter
+        scalarField pDia_;
+
+        //- List of particle drag force
+        vectorList pDrag_;
+
+        //- Jd coefficient
+        scalarField Jd_;
+
+        //- Drag model
+        autoPtr<Foam::dragModel> drag_;
+
+        //- List of relative velocity (mag) of each particle
+        vectorField Uri_;
+        scalarField magUri_;
+
+        //- List/Field of ensemble quantities
+        scalarField ensembleAlpha_;
+        scalarField ensembleAlphaTimeFixed_;
+        label ensembleCount_;
+
+        //- Eulerian Fields for Tc
+        volScalarField Omega_;
+        volVectorField Asrc_;
+
+        //- Fluid density
+        // scalar rhob_;
+
+
+    // Private Member Functions
+
+        const scalarListList& particleWeights();
+
+        const labelListList& particleCells();
+
+        //- Reallocate listLists if particle number has changed.
+        void reAllocateLists() const;
+
+        //- Ensemble averaging function (alpha & Ue)
+        void initEnsemble();
+        void accumulateEnsemble();
+        void computeEnsemble();
+
+        //- Calculate weight for the cells related to this particle
+        void calcWeightGroup
+        (
+            scalarList& weight,
+            softParticle& p,
+            label& cellI,
+            int& i
+        );
+
+        //- Update weight list corresponding to particles
+        //- and the cell list itself
+        void updateCellWeights();
+
+        //- Setup particle diameter
+        void setupParticleDia();
+
+        //- Update particle alpha list (per fluid step)
+        void updateParticleAlpha();
+
+        //- Update relative Ur list
+        //- (per fluid step or substep)
+        //- Update Ur_ and magUr_
+        void updateParticleUr();
+
+        //- Compute averge quantities
+        //- particle quantities --> Eulerian quantities
+        void particleToEulerianField();
+
+        //- Compute ensemble average of particle velocity (list)
+        //- and alpha field
+        void ensembleParticleVelocity();
+
+        //- Compute ensemble average of volume fraction
+        void ensembleAlpha();
+
+        //- drag on each particle
+        //- update pDrag_
+        void  updateDragOnParticles();
+
+        // Assert all particles in cells;
+        void assertParticleInCell();
+
+
+public:
+
+    // Constructors
+
+        //- Construct null
+        enhancedCloud
+        (
+             const volPointInterpolation& vpi,
+             const volVectorField& U,
+             const volScalarField& p,
+             volVectorField& Ue,
+             const volVectorField& Uf,
+             dimensionedScalar nu,
+             volScalarField& alpha,
+             IOdictionary& cloudDict,
+             IOdictionary& transDict,
+             scalar bwDxRatio
+        );
+
+
+    // Destructor
+    ~enhancedCloud();
+
+
+    // Member Functions
+
+        //- Use averaging method to get Omega and A field
+        void calcTcFields();
+
+        //- Evolve function
+        void evolve();
+
+
+        // Access
+
+            //- Return reference of Omega field
+            const volScalarField& Omega() const
+            {
+                return Omega_;
+            }
+
+            //- Return reference of A field
+            const volVectorField& Asrc() const
+            {
+                return Asrc_;
+            }
+
+            //- Whether box-car weight should be used.
+            bool boxCar() const
+            {
+                return boxCar_;
+            }
+
+            //- Return number of particles in the cloud
+            label particleCount() const
+            {
+                return particleCount_;
+            }
+
+            //- Print particle weight & particle cells
+            void weightInfo();
+
+            //- Print particle drag sum-up field
+            //--- Not parallel yet.
+            void dragInfo();
+
+}; // End of class "enhancedCloud"
+
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+} // End namespace Foam
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+#endif
+
+// ************************************************************************* //

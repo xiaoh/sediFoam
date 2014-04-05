@@ -1,0 +1,83 @@
+\documentclass[11pt, oneside]{article}   	% use "amsart" instead of "article" for AMSLaTeX format
+\usepackage{geometry}                		% See geometry.pdf to learn the layout options. There are lots.
+\geometry{letterpaper}                   		% ... or a4paper or a5paper or ... 
+%\geometry{landscape}                		% Activate for for rotated page geometry
+%\usepackage[parfill]{parskip}    		% Activate to begin paragraphs with an empty line rather than an indent
+\usepackage{graphicx}				% Use pdf, png, jpg, or eps§ with pdflatex; use eps in DVI mode
+								% TeX will automatically convert eps --> pdf in pdflatex		
+\usepackage{amssymb}
+\usepackage{listings}
+\lstset{language=C++, mathescape=true}  
+
+\title{ Scalable Algorithm of OpenFOAM--Lammps Coupling}
+\author{Rui Sun and Heng Xiao}
+%\date{}							% Activate to display a given date or no date
+
+
+
+\begin{document}
+\maketitle
+%\section{}
+%\subsection{}
+
+If bound boxes do not change during simulations, then in each simulation do the following:
+\begin{enumerate}
+\item Find the boundary box of each OF processor $B^o_1$ to $B^o_n$, broadcast to all processors
+\item Find the box of each Lammps processor $B^l_1$ to $B^l_n$, broadcast to all processors
+\item On each processor $i$, 
+\begin{lstlisting}[fontadjust]
+    for j = 1 : n-1
+    {
+	find intersection $S^{(i)}[j]$ of $B^o_i$ and $B^l_j$
+    }
+\end{lstlisting}
+One can think of $S_{ij}$ as a ``matrix'', with each processor $i$ holding a row corresponding to its own intersection with all others. Each element of $B$ and $S$ are bound box in the format of [$\mathbf{x}_{low}$, $\mathbf{x}_{high}$].  Since $S[j]$ is local to each processor, superscript $(i)$ can be omitted.
+\item Create buffers for communication (each buffer corresponding to a overlapping neighbor
+\end{enumerate}
+
+At each OpenFOAM time-step (which may consist of a number of Lammps time steps), do the following:
+\begin{enumerate}
+\item During foam-to-lammps communication (drag forces), on each processor $i$
+\begin{lstlisting}[fontadjust]
+    // Np = number of  local particles on processor $i$, $p_1$ to $p_N$
+    // loop through all particles
+    for k = 1 : Np  {
+        // loop through all processors
+        for j = 1 : n {
+            // I have overlap with processor $j$
+            if(S[j] not empty and j != k)   {
+	      if ($p_k$ in S[j])  { add $p_k$ to buffer outgoing[j]}
+	  }
+        }
+    }
+    send buffer to all processor (i.e., outgoing[j] to processor $j$)
+    receive buffer  from all processors, place in incoming[j]
+\end{lstlisting}
+
+\item  The most recent foam processor ID (to which the processor belongs to) is a property of the particle (in Lammps data structure), and will be passed to OpenFOAM at each fluid time step (exchange). 
+During lammps-to-foam communication (particle information $\mathbf{x}, \mathbf{v}$, tag, etc.), on each processor~$i$:
+scan through all particles, send the particle information ($\mathbf{x}, \mathbf{v}$, tag, etc.) to the processor it belongs to in OpenFOAM.
+
+
+\item OpenFoam will unpack the particle position and velocity data, and update the particle states (including host cell IDs). If a particle has cross OpenFOAM processor boundary, this will also be handled (by passing the particle to the new processor). 
+
+\end{enumerate}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\end{document}  

@@ -1,0 +1,91 @@
+/*--------------------------------*- C++ -*----------------------------------* \
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  1.6                                   |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      sampleDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+interpolationScheme cellPoint;
+
+surfaceFormat   raw;
+
+setFormat       raw;
+
+sets            
+(
+    lineY1
+    {
+        type    midPointAndFace;
+        axis    x;
+
+        start   (0.001   0.0164  0.005);
+        end     (0.043   0.0164  0.005);
+        nPoints 100;
+    }
+
+    lineY2
+    {
+        type    midPointAndFace;
+        axis    x;
+
+        start   (0.001   0.0312  0.005);
+        end     (0.043   0.0312  0.005);
+        nPoints 100;
+    }
+
+    lineY3
+    {
+        type    midPointAndFace;
+        axis    x;
+
+        start   (0.001   0.0150  0.005);
+        end     (0.043   0.0150  0.005);
+        nPoints 100;
+    }
+
+    lineY4
+    {
+        type    midPointAndFace;
+        axis    x;
+
+        start   (0.001   0.0250  0.005);
+        end     (0.043   0.0250  0.005);
+        nPoints 100;
+    }
+
+    lineY5
+    {
+        type    midPointAndFace;
+        axis    x;
+
+        start   (0.001   0.0350  0.005);
+        end     (0.043   0.0350  0.005);
+        nPoints 100;
+    }
+);
+
+// surfaces        
+// (
+//     fluid_to_solid_interpolate
+//     {
+//         type            patch;
+//         patches         ("fluid_to_solid");
+//         // interpolate     true;
+//     }
+// );
+
+// fields          (myWallShearStress p);
+fields          (alphaMean UaMean);
+
+
+// ************************************************************************* //

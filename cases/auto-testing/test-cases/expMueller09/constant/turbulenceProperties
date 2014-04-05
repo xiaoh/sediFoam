@@ -1,0 +1,49 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  1.4                                   |
+|   \\  /    A nd           | Web:      http://www.openfoam.org               |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+
+FoamFile
+{
+    version         2.0;
+    format          ascii;
+
+    root            "";
+    case            "";
+    instance        "";
+    local           "";
+
+    class           dictionary;
+    object          turbulenceProperties;
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+turbulenceModel laminar;
+
+turbulence      off;
+
+laminarCoeffs
+{
+}
+
+kEpsilonCoeffs
+{
+    Cmu             Cmu [0 0 0 0 0 0 0] 0.09;
+    C1              C1 [0 0 0 0 0 0 0] 1.44;
+    C2              C2 [0 0 0 0 0 0 0] 1.92;
+    alphak          alphak [0 0 0 0 0 0 0] 1;
+    alphaEps        alphaEps [0 0 0 0 0 0 0] 0.76923;
+}
+
+wallFunctionCoeffs
+{
+    kappa           kappa [0 0 0 0 0 0 0] 0.4187;
+    E               E [0 0 0 0 0 0 0] 9;
+}
+
+
+// ************************************************************************* //

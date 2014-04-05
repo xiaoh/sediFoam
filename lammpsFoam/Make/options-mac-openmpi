@@ -1,0 +1,28 @@
+/*LAMMPS_DIR = ../lammps-1Feb14/src*/
+
+EXE_INC = \
+    -I$(PWD)/include \
+    -I$(LAMMPS_DIR)/   \
+    -I$(LAMMPS_DIR)/GRANULAR   \
+    -I/opt/local/include/openmpi-gcc46/ \
+    -I/opt/local/lib/openmpi-gcc46/ \
+    -I$(LAMMPS_DIR)/Obj_shanghaimac   \
+    -I$(FOAM_SRC)/lagrangian/basic/lnInclude \
+    -I$(FOAM_SRC)/meshTools/lnInclude \
+    -I$(LIB_SRC)/cfdTools/incompressible \
+    -I$(LIB_SRC)/cfdTools/general/lnInclude \
+    -I$(LIB_SRC)/finiteVolume/lnInclude     \
+    -I$(LIB_SRC)/triSurface/lnInclude     \
+    -IdragModels/lnInclude
+
+EXE_LIBS = \
+    -L$(FOAM_USER_LIBBIN) \
+    -L$(LAMMPS_DIR) \
+    -lLagrangianInterfacialModels  \
+    -lfiniteVolume \
+    -lmeshTools  \
+    -llagrangian \
+    -L/opt/local/lib/openmpi-gcc46/ -lmpi -lmpi_cxx \
+    -llammps_shanghaimac \
+    -ltriSurface \
+    -lstdc++

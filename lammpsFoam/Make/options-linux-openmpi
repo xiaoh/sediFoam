@@ -1,0 +1,29 @@
+/*LAMMPS_DIR = ../lammps-1Feb14/src*/
+
+EXE_INC = \
+    -I$(PWD)/include \
+    -I$(LAMMPS_DIR)/   \
+    -I$(LAMMPS_DIR)/GRANULAR   \
+    -I/usr/include/openmpi-x86_64/ \
+    -I/usr/lib64/openmpi/lib/ \
+    -I$(LAMMPS_DIR)/Obj_shanghailinux   \
+    -I$(FOAM_SRC)/lagrangian/basic/lnInclude \
+    -I$(FOAM_SRC)/meshTools/lnInclude \
+    -I$(LIB_SRC)/cfdTools/incompressible \
+    -I$(LIB_SRC)/cfdTools/general/lnInclude \
+    -I$(LIB_SRC)/finiteVolume/lnInclude     \
+    -I$(LIB_SRC)/triSurface/lnInclude     \
+    -IdragModels/lnInclude
+
+EXE_LIBS = \
+    -L$(FOAM_USER_LIBBIN) \
+    -L$(LAMMPS_DIR) \
+    -L$(LAMMPS_DIR)/STUBS \
+    -lLagrangianInterfacialModels  \
+    -lfiniteVolume \
+    -lmeshTools  \
+    -llagrangian \
+    -L/usr/lib64/openmpi/lib/ -lmpi -lmpi_cxx\
+    -llammps_shanghailinux \
+    -ltriSurface \
+    -lstdc++
