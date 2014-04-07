@@ -38,6 +38,7 @@ make yes-GRANULAR
 make yes-KSPACE
 make yes-MANYBODY
 make yes-MOLECULE
+make yes-FLD
 
 version=`uname`
 # Use different options according to different versions

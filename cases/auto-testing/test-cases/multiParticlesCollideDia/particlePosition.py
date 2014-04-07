@@ -35,6 +35,6 @@ for i in [1,2,3,4]:
 
     p.append(plt.plot(x_p_bench,y_p_bench,'r-o',markersize = 3))
 
-lg = plt.legend([p[0],p[1]],["current result","benchmark"],loc=4)
-lg.draw_frame(False)
+# lg = plt.legend([p[0],p[1]],["current result","benchmark"],loc=4)
+# lg.draw_frame(False)
 plt.savefig('data/multiParticlesPositionDia.pdf');
