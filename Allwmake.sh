@@ -49,7 +49,7 @@ then
     make makeshlib
     make -f Makefile.shlib shanghailinux
     cd $FOAM_USER_LIBBIN
-    ln -s $lammpsDir/src/liblammps_shanghailinux.so .
+    ln -sf $lammpsDir/src/liblammps_shanghailinux.so .
     cd $currentDir/lammpsFoam
     touch Make/options
     echo "LAMMPS_DIR ="$lammpsSRC > Make/options
@@ -61,7 +61,7 @@ then
     make makeshlib
     make -f Makefile.shlib shanghaimac
     cd $FOAM_USER_LIBBIN
-    ln -s $lammpsDir/src/liblammps_shanghaimac.so .
+    ln -sf $lammpsDir/src/liblammps_shanghaimac.so .
     cd $currentDir/lammpsFoam
     touch Make/options
     echo "LAMMPS_DIR ="$lammpsSRC > Make/options
