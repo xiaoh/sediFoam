@@ -2,9 +2,9 @@
 cd ${0%/*} || exit 1 # Run from this directory
 
 currentDIR=$PWD
-reportDIR=$PWD/report
+reportDIR=$PWD/test-report-generation
 
-cd $currentDIR/bench
+cd $currentDIR/test-cases
 benchDIR=$PWD
 for folder in *; do
     cd $folder 
@@ -14,7 +14,7 @@ for folder in *; do
     cd $benchDIR
 done
 
-cd $currentDIR/example
+cd $currentDIR/test-cases
 exampleDIR=$PWD
 for folder in *; do
     cd $folder 
@@ -25,4 +25,11 @@ for folder in *; do
 done
 
 cd $reportDIR
-rm figs/*.pdf
+
+for folder in *; do
+    cd $folder 
+    echo "cleaning: $PWD"
+    rm -rf figs
+    rm *.log *.pdf *.aux *.out
+    cd ..
+done

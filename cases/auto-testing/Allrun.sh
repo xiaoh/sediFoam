@@ -15,7 +15,7 @@ for folder in *; do
 	mkdir -p $reportDIR/figs
     fi
     cd $reportDIR/figs
-    ln -sf $xDIR/data/*.pdf . 
+    cp -rf $xDIR/data/*.pdf . 
     cd $xDIR
     cd $benchDIR
 done
@@ -27,7 +27,7 @@ for folder in *; do
     xDIR=$PWD
     ./Allrun.sh &> log.run
     cd $reportDIR/figs
-    ln -sf $xDIR/data/*.pdf . 
+    cp -rf $xDIR/data/*.pdf . 
     cd $xDIR
     cd $exampleDIR
 done
