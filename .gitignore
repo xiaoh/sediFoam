@@ -3,7 +3,7 @@
 *~
 *.aux
 *.log
-*.DS_Store
+.DS_Store
 *.synctex.gz
 dependencies
 dependencyFiles
