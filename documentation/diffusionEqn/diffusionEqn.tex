@@ -10,7 +10,7 @@
 \usepackage{color}
 \usepackage{fullpage}
 
-\title{Aggregation and Interpolation in CFD--DEM Based on Diffusion Equation}
+\title{Aggregation and Interpolation in CFD--DEM Based on Diffusion Equations}
 \author{Rui Sun and Heng Xiao}
 %\date{}							% Activate to display a given date or no date
 
@@ -32,7 +32,7 @@ Here, aggregation means Lagrangian phase to Eulerian phase operations; Interpola
 \subsection{Desirable Properties of the Interpolation Procedure}
 
 \begin{enumerate}
-\item (Essential) Free of boundary abnormally at both physical boundaries and processor boundaries. For example, for a case with uniformly distributed  particles as in Fig.~\ref{fig:boundary}, the obtained solid volume fraction $\varepsilon_s$ should be a uniform field.
+\item (Essential) Free of boundary abnormally at both physical boundaries and processor boundaries. For example, for a case with uniformly distributed, the obtained solid volume fraction $\varepsilon_s$ should be a uniform field.
 \item  (Essential)  Conservation of mass and momentum, i.e.,
 \begin{align} % requires amsmath; align* for no eq. number
 \sum_{i = 1}^{N_c} \varepsilon_{s, i} V_{c, i}  & = \sum_{k = 1}^{N_p} V_{p, k}  \\
@@ -79,18 +79,18 @@ Two-Grid Formulation (Deb \& Tafti)
 \subsection{Equivalence Between Diffusion- and Kernel-Based Methods}
 Consider 1D diffusion equation in infinite domain:
 \begin{align}
-\frac{\partial u}{\partial t} & = \frac{\partial^2 u}{\partial x^2} \textrm{  on  } -\infty < x < \infty , t > 0 \\
-	u & = f(x)  \textrm{  at  } t = 0
+\frac{\partial \varepsilon}{\partial t} & = \frac{\partial^2  \varepsilon}{\partial x^2} \textrm{  on  } -\infty < x < \infty , t > 0 \\
+	\left.	\varepsilon \right|_{t=0} & = f(x) 
 \end{align}
 where $f(x)$ is a square integrable function;  $x$ and $t$ are normalized spatial and temporal coordinates, respectively. The solution to the equation above based on Green's function is:
 \begin{align}
-u(x, t) & = \int_{-\infty}^{\infty} K(x-\xi,  t) f(\xi) d \xi \\
+\varepsilon(x, t) & = \int_{-\infty}^{\infty} K(x-\xi,  t) f(\xi) d \xi \\
 \textrm{where } K(x, t) & = \frac{1}{\sqrt{4 \pi t}} \exp \left[ -\frac{x^2}{4t} \right] 
 \end{align}
 
 If the initial condition is a delta function centered at $x_0$, i.e., $f(\xi) = \delta(\xi-x_0)$, according to the sifting property of the delta function, the solution is then:
 \begin{align}
-u(x, t) & = \int_{-\infty}^{\infty} K(x-\xi)  \; \delta(\xi - x_0) d \xi \\
+\varepsilon(x, t) & = \int_{-\infty}^{\infty} K(x-\xi)  \; \delta(\xi - x_0) d \xi \\
 	& = K(x-x_0, t)
 \end{align}
 
@@ -104,18 +104,18 @@ f(\xi) = \sum_{i=1}^{N_c} c_i  \; \delta(\xi - x_i)
 \end{align}
 where $c_i$ is the multiplier coefficient. Similarly, the solution is a linear combination of the kernel functions:
 \begin{align}
-u(x, t) = \sum_{i=1}^{N_c} c_i  \; K(x - x_i, t)
+\varepsilon(x, t) = \sum_{i=1}^{N_c} c_i  \; K(x - x_i, t)
 \end{align}
 
-We are interested in the solution at a fixed time $\tau$, denoted as $\hat{u}(x) \equiv u(x, \tau)$. The solution is rewritten as: 
+We are interested in the solution at a fixed time $\tau$, denoted as $\hat{\varepsilon}(x) \equiv \varepsilon(x, \tau)$. The solution is rewritten as: 
 \begin{equation}
-\hat{u}(x) = \sum_{i=1}^{N_c} c_i  \; K(x - x_i) 
+\hat{\varepsilon}(x) = \sum_{i=1}^{N_c} c_i  \; K(x - x_i) 
 	= \sum_{i=1}^{N_c} c_i  \; \frac{1}{\sqrt{4 \pi \tau}} \exp \left[ -\frac{(x-x_i)^2}{4\tau} \right] 
 \end{equation}
 That is, the solution is a superposition of $N_c$ kernel functions centered at cell centers $x_i$.  This is equivalent to the kernel function smoothing. The bandwidth of the kernel function is determined by the time $\tau$.
-One can interpret $c_i$ as the total solid particle volume in cell $i$.  Correspondingly, $\hat{u}(x)$ is the solid volume fraction at any location $x$. 
+One can interpret $c_i$ as the total solid particle volume in cell $i$.  Correspondingly, $\hat{\varepsilon}(x)$ is the solid volume fraction at any location $x$. 
 \begin{equation}
-\hat{u} (x) = \left. \frac{dV_s}{dV}  \right|_{x}
+\hat{\varepsilon} (x) = \left. \frac{dV_s}{dV}  \right|_{x}
 \end{equation}
 where $V_s$ and $V$ indicate solid and total volume, respectively.
 
