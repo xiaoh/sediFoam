@@ -64,14 +64,15 @@ Analytical Method
 
 Statistical Kernel Function (Xiao \& Sun)
 \begin{itemize}
-\item Difficult and inefficient to implement when bandwidth is larger than 2 or 3 cell width.
-\item Better accuracy than PCM, leading to smoother $\varepsilon_s$ field
+\item $+$ Better accuracy than PCM, leading to smoother $\varepsilon_s$ field
+\item $-$ Difficult and inefficient to implement when bandwidth is larger than 2 or 3 cell size.
 \end{itemize}
 
 Two-Grid Formulation (Deb \& Tafti)
 \begin{itemize}
 \item $+$ better accuracy in obtained $\varepsilon_s$ field
-\item $+$ Extension to unstructured grid not straightforward
+\item $-$ Extension to unstructured grid not straightforward
+\item $-$ For unstructured grid, parallel computing pose challenge
 \end{itemize}
 
 
@@ -172,16 +173,51 @@ The analysis above assumed infinite domain, and would be a good estimation in th
 
 \emph{\color{red} Rui: Estimate how many time steps are needed to solve the diffusion cost if explicit time stepping is used, assuming $\Delta x = d_p$.  Note the time step restrictions for diffusion equation.}
 
+\subsection{Summary of Advantages and Disadvantages of Aggregation Methods}
+
+\begin{center}
+\emph{\color{red} Rui: Fix the format of this table (Table~\ref{tab:pro-con})}.
+\end{center}
+
+\begin{table}[!htbp]
+\caption{Summary of Advantages and Disadvantages of Aggregation Methods}
+\begin{center}
+\begin{tabular}{|c|c|c|c}
+\hline
+methods & unstructured mesh & implementation in parallel code & smooth field on small cells \\
+\hline
+PCM &  easy & easy & no   \\
+two-grid formulation & difficult & difficult  & yes \\
+analytical method & difficult & difficult & yes (if  $\Delta x > \sim 2d_p$)  \\
+statistical kernel function & moderate & moderate & yes \\
+diffusion-based method & easy & easy & yes \\
+\hline
+\end{tabular}
+\end{center}
+\label{tab:pro-con}
+\end{table}%
+
+
 \section{Numerical Results}
 
 The following case are tested:
-\begin{enumerate}
-\item Comparison of  kernel function and diffusion equation based aggregation with 3 to 5 particles on 1D and 2D domains. Demonstrate the equivalence between the two methods.
-\item On a 2D Cartesian grid, perform volume fraction aggregation and compare with analytical and two-grid formulations.
-\item Aggregation of volume fraction on a stretched grid, and on a unstructured grid. 
-\item Test fluidization case with PCM and diffusion-based aggregation, and compare pressure signal. (Ref to AIChe paper).
-\end{enumerate}
+\begin{description}
+\item [Case 1:] Comparison of  kernel function and diffusion equation based aggregation with 3 to 5 particles on 1D and 2D domains. Demonstrate the equivalence between the two methods. [Use Matlab]
+\item [Case 2:] On a 2D Cartesian grid, perform volume fraction aggregation using diffusion, and compare with analytical and two-grid formulations. [Use Matlab]
+\item [Case 3:] Aggregation of volume fraction on a stretched grid, and on a unstructured grid.  [Use OpenFOAM]
+\item [Case 4:] Test fluidization case with PCM and diffusion-based aggregation, and compare pressure signal. (Ref to AIChe paper).
+\end{description}
+
+The purpose of each test case is as follows
+\begin{description}
+\item [Case 1:]  Demonstrate equivalence of between kernel function based aggregation and diffusion-based aggregation.
+\item [Case 2:]  Examine the accuracy of diffusion-based aggregation method.
+\item [Case 3:] Evaluate the performance of diffusion-based aggregation on unstructured meshes.
+\item [Case 4:] Evaluate the performance  
+\end{description}
 
 
+
+\input{case-details}
 
 \end{document}  
