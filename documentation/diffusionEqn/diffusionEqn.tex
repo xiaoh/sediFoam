@@ -1,0 +1,223 @@
+\documentclass[11pt, oneside]{article}   	% use "amsart" instead of "article" for AMSLaTeX format
+\usepackage{geometry}                		% See geometry.pdf to learn the layout options. There are lots.
+\geometry{letterpaper}                   		% ... or a4paper or a5paper or ... 
+%\geometry{landscape}                		% Activate for for rotated page geometry
+\usepackage[parfill]{parskip}    		% Activate to begin paragraphs with an empty line rather than an indent
+\usepackage{graphicx}				% Use pdf, png, jpg, or eps§ with pdflatex; use eps in DVI mode
+								% TeX will automatically convert eps --> pdf in pdflatex		
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{color}
+\usepackage{fullpage}
+
+\title{Aggregation and Interpolation in CFD--DEM Based on Diffusion Equations}
+\author{Rui Sun and Heng Xiao}
+%\date{}							% Activate to display a given date or no date
+
+\begin{document}
+\maketitle
+
+\section{Introduction and Motivation}
+
+\subsection{Interpolations Needed in a CFD--DEM Solver}
+Here, aggregation means Lagrangian phase to Eulerian phase operations; Interpolation means Eulerian phase to Lagrangian phase operations. Sometimes they are also referred to as ``forward'' and ``backward'' interpolations.
+\begin{enumerate}
+\item  Aggregation of solid volume fraction Eulerian field $\varepsilon_s$ from particle data (position $\mathbf{x}_p$)
+\item Aggregation of Eulerian solid-phase velocity $\mathbf{u}_s$ from particle data (position $\mathbf{x}_p$ and velocity $\mathbf{u}_p$)
+\item Aggregation of fluid--particle interaction forces onto fluid cells (conservation is essential to ensure momentum balance of the fluid--particle system). See below. 
+\item Interpolation of Eulerian fluid-phase velocity field $\mathbf{u}_f$ at particle locations  $\mathbf{u}_{f@p}$ (needed for calculating drag forces); Similar interpolation are needed for $\varepsilon_s$.
+\end{enumerate}
+
+
+\subsection{Desirable Properties of the Interpolation Procedure}
+
+\begin{enumerate}
+\item (Essential) Free of boundary abnormally at both physical boundaries and processor boundaries. For example, for a case with uniformly distributed, the obtained solid volume fraction $\varepsilon_s$ should be a uniform field.
+\item  (Essential)  Conservation of mass and momentum, i.e.,
+\begin{align} % requires amsmath; align* for no eq. number
+\sum_{i = 1}^{N_c} \varepsilon_{s, i} V_{c, i}  & = \sum_{k = 1}^{N_p} V_{p, k}  \\
+\sum_{i = 1}^{N_c} \mathbf{F}_{c, i}  & =  -\sum_{k = 1}^{N_p} \mathbf{f}_{p, k}
+\end{align}
+where $N_c$ is the number of cells in the OpenFOAM mesh; $N_p$ is the number of particles in the system;  $V_{c, i}$ is the  volume of cell $i$; $\mathbf{F}_{c, i}$ is the force on cell $i$ exerted by all particles (in this cell or adjacent cells, depending on the mapping scheme); $\mathbf{f}_{p, k}$ is the force exerted on particle $k$ exerted by the fluid.
+\item Convenience of implementation in a parallel code.
+\item Convenience of implementation in an unstructured mesh as in OpenFOAM.
+\end{enumerate}
+
+\subsection{Existing Algorithms and Their Advantages and Drawbacks}
+
+Particle Centroid Method
+
+\begin{itemize}
+\item $+$ satisfies the conservation requirements with straightforward implementation; 
+\item + easy implementation on  unstructured mesh;
+\item + easy implementation on MPI parallel codes;
+\item  $-$ large errors in obtained $\varepsilon_s$ leading to errors in force calculations
+\end{itemize}
+
+Analytical Method
+
+\begin{itemize}
+\item $+$ better accuracy in obtained $\varepsilon_s$
+\item $-$ still would not work if  particle diameter is larger than cell size.
+\item $-$ difficulty to implement in unstructured mesh.
+\end{itemize}
+
+Statistical Kernel Function (Xiao \& Sun)
+\begin{itemize}
+\item $+$ Better accuracy than PCM, leading to smoother $\varepsilon_s$ field
+\item $-$ Difficult and inefficient to implement when bandwidth is larger than 2 or 3 cell size.
+\end{itemize}
+
+Two-Grid Formulation (Deb \& Tafti)
+\begin{itemize}
+\item $+$ better accuracy in obtained $\varepsilon_s$ field
+\item $-$ Extension to unstructured grid not straightforward
+\item $-$ For unstructured grid, parallel computing pose challenge
+\end{itemize}
+
+
+\section{Proposed Method for Aggregation and Interpolation}
+\subsection{Equivalence Between Diffusion- and Kernel-Based Methods}
+Consider 1D diffusion equation in infinite domain:
+\begin{align}
+\frac{\partial \varepsilon}{\partial t} & = \frac{\partial^2  \varepsilon}{\partial x^2} \textrm{  on  } -\infty < x < \infty , t > 0 \\
+	\left.	\varepsilon \right|_{t=0} & = f(x) 
+\end{align}
+where $f(x)$ is a square integrable function;  $x$ and $t$ are normalized spatial and temporal coordinates, respectively. The solution to the equation above based on Green's function is:
+\begin{align}
+\varepsilon(x, t) & = \int_{-\infty}^{\infty} K(x-\xi,  t) f(\xi) d \xi \\
+\textrm{where } K(x, t) & = \frac{1}{\sqrt{4 \pi t}} \exp \left[ -\frac{x^2}{4t} \right] 
+\end{align}
+
+If the initial condition is a delta function centered at $x_0$, i.e., $f(\xi) = \delta(\xi-x_0)$, according to the sifting property of the delta function, the solution is then:
+\begin{align}
+\varepsilon(x, t) & = \int_{-\infty}^{\infty} K(x-\xi)  \; \delta(\xi - x_0) d \xi \\
+	& = K(x-x_0, t)
+\end{align}
+
+\begin{center}
+\emph{\color{red} Rui: [Insert a 1D picture here for illustration]}
+\end{center}
+
+Consider an initial condition with a superposition of multiple delta functions centered at $x_i$ (locations of cell centers),
+\begin{align}
+f(\xi) = \sum_{i=1}^{N_c} c_i  \; \delta(\xi - x_i)
+\end{align}
+where $c_i$ is the multiplier coefficient. Similarly, the solution is a linear combination of the kernel functions:
+\begin{align}
+\varepsilon(x, t) = \sum_{i=1}^{N_c} c_i  \; K(x - x_i, t)
+\end{align}
+
+We are interested in the solution at a fixed time $\tau$, denoted as $\hat{\varepsilon}(x) \equiv \varepsilon(x, \tau)$. The solution is rewritten as: 
+\begin{equation}
+\hat{\varepsilon}(x) = \sum_{i=1}^{N_c} c_i  \; K(x - x_i) 
+	= \sum_{i=1}^{N_c} c_i  \; \frac{1}{\sqrt{4 \pi \tau}} \exp \left[ -\frac{(x-x_i)^2}{4\tau} \right] 
+\end{equation}
+That is, the solution is a superposition of $N_c$ kernel functions centered at cell centers $x_i$.  This is equivalent to the kernel function smoothing. The bandwidth of the kernel function is determined by the time $\tau$.
+One can interpret $c_i$ as the total solid particle volume in cell $i$.  Correspondingly, $\hat{\varepsilon}(x)$ is the solid volume fraction at any location $x$. 
+\begin{equation}
+\hat{\varepsilon} (x) = \left. \frac{dV_s}{dV}  \right|_{x}
+\end{equation}
+where $V_s$ and $V$ indicate solid and total volume, respectively.
+
+\begin{center}
+\emph{\color{red} Rui: [Insert a 1D picture here for illustration]}
+\end{center}
+
+\subsection{Algorithm for Solid Volume Calculation}
+
+\begin{enumerate}
+\item Sum up particle volume in each cell, and obtain solid volume fraction $\tilde{\varepsilon}$ by dividing corresponding cell volumes.
+\item Determine $\tau$ based on desired kernel bandwidth $b$, which is in turn specified based on particle diameters, $b = n d_p$. 
+
+To be consistent with the definition of bandwidth specified in (Xiao and Sun 2010), the diffusion time should be chosen as
+\begin{equation}
+\sqrt{4\tau} =  b ,
+\end{equation}
+or equivalently
+\begin{equation}
+ \tau= b^2/4 .
+\end{equation}
+If we chose the bandwidth to be $6d_p$, then $\tau = 9 d_p^2$.
+
+Alternatively, one can fix $\tau = 1$, and specify diffusion coefficient $D$. The benefit of the latter is being able to specify a homogeneous field based on the mean (or max) particle diameter $d_p$ in each cell. In this case, we have
+\begin{align}
+D = 1/(9 d_p^2)
+\end{align}
+
+\item Solve diffusion equation to $\tau$, the obtained solid volume fraction is $\varepsilon$. 
+\end{enumerate}
+
+Other Lagrangian-to-Eulerian aggregations, i.e., computing particle forces on the fluid according to particle forces, and obtaining solid phase velocity field $\mathbf{u}_s$ according to individual particle velocities can be done in a similar manner.
+
+\subsection{Eulerian-to-Lagrangian Interpolation}
+
+Another operation needed for the calculation of particle drag forces is interpolation of Eulerian field quantities such as volume fraction $\varepsilon$ and fluid phase velocity $\mathbf{u}_f$ to particle locations. The Eulerican quantities may be based on fine meshes comparable to or smaller than particle diameters.  Directly taking values of the host cell or averaging from the neighbors of the host cell introduces large representation errors. One needs to smooth out the small-scale features.
+
+\begin{enumerate}
+\item Integrate the diffusion equation with the Eulerian field to be interpolated as initial condition. The obtained field will be used for interpolation in next step only, and will be discarded afterward. 
+\item Use the``direct-mapping'' or ``neighbor-weight'' algorithm in OpenFOAM to interpolate cell values to particle locations.
+\end{enumerate}
+
+\subsection{Conservation Characteristics}
+The diffusion equations are solved based on conservative finite volume method.  Local and global conservation of the diffused quantity (e.g., volume fraction) is guaranteed.
+
+\subsection{Effects Near Boundaries}
+
+The analysis above assumed infinite domain, and would be a good estimation in the interior of the computational domain.  Within a few bandwidth of physical boundaries, further analysis are needed.  Note that, however, processor boundaries are taken care of when solving the diffusion equations, and thus do not pose major difficulty. 
+\begin{center}
+\emph{\color{red} Rui: test this algorithm with a uniform particle distribution.}
+\end{center}
+
+\subsection{Computational Cost}
+
+\emph{\color{red} Rui: Estimate how many time steps are needed to solve the diffusion cost if explicit time stepping is used, assuming $\Delta x = d_p$.  Note the time step restrictions for diffusion equation.}
+
+\subsection{Summary of Advantages and Disadvantages of Aggregation Methods}
+
+\begin{center}
+\emph{\color{red} Rui: Fix the format of this table (Table~\ref{tab:pro-con})}.
+\end{center}
+
+\begin{table}[!htbp]
+\caption{Summary of Advantages and Disadvantages of Aggregation Methods}
+\begin{center}
+\begin{tabular}{|c|c|c|c}
+\hline
+methods & unstructured mesh & implementation in parallel code & smooth field on small cells \\
+\hline
+PCM &  easy & easy & no   \\
+two-grid formulation & difficult & difficult  & yes \\
+analytical method & difficult & difficult & yes (if  $\Delta x > \sim 2d_p$)  \\
+statistical kernel function & moderate & moderate & yes \\
+diffusion-based method & easy & easy & yes \\
+\hline
+\end{tabular}
+\end{center}
+\label{tab:pro-con}
+\end{table}%
+
+
+\section{Numerical Results}
+
+The following case are tested:
+\begin{description}
+\item [Case 1:] Comparison of  kernel function and diffusion equation based aggregation with 3 to 5 particles on 1D and 2D domains. Demonstrate the equivalence between the two methods. [Use Matlab]
+\item [Case 2:] On a 2D Cartesian grid, perform volume fraction aggregation using diffusion, and compare with analytical and two-grid formulations. [Use Matlab]
+\item [Case 3:] Aggregation of volume fraction on a stretched grid, and on a unstructured grid.  [Use OpenFOAM]
+\item [Case 4:] Test fluidization case with PCM and diffusion-based aggregation, and compare pressure signal. (Ref to AIChe paper).
+\end{description}
+
+The purpose of each test case is as follows
+\begin{description}
+\item [Case 1:]  Demonstrate equivalence of between kernel function based aggregation and diffusion-based aggregation.
+\item [Case 2:]  Examine the accuracy of diffusion-based aggregation method.
+\item [Case 3:] Evaluate the performance of diffusion-based aggregation on unstructured meshes.
+\item [Case 4:] Evaluate the performance  
+\end{description}
+
+
+
+\input{case-details}
+
+\end{document}  
