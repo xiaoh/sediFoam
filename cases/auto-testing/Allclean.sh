@@ -29,7 +29,6 @@ cd $reportDIR
 for folder in *; do
     cd $folder 
     echo "cleaning: $PWD"
-    rm -rf figs
     rm *.log *.pdf *.aux *.out
     cd ..
 done

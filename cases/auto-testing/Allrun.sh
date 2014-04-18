@@ -1,36 +1,40 @@
 #!/bin/bash
 cd ${0%/*} || exit 1 # Run from this directory
 
-codeVersion="ab04"
+# Save directory names
 currentDIR=$PWD
-reportDIR=$PWD/reports
+reportDIR=$PWD/test-report-generation
 
-cd $currentDIR/bench
+# Set up a new DIR with the name of the code version
+codeVersion=`git log -1 --format="%h"`
+cd $reportDir
+
+reportName="report-"
+reportName+=$codeVersion
+
+mkdir $reportDIR/$reportName
+cd $reportDIR/$reportName
+mkdir figs
+
+# Copy necessary files to generate the report
+generationDIR=$PWD
+cd $reportDIR/essential
+cp -rf * $generationDIR
+
+# Run all cases simultaneously
+command="pwd"
+index=1
+cd $currentDIR/test-cases
 benchDIR=$PWD
 for folder in *; do
     cd $folder 
     xDIR=$PWD
     ./Allrun.sh &> log.run
-    if [ ! -d $reportDIR/figs ]; then
-	mkdir -p $reportDIR/figs
-    fi
-    cd $reportDIR/figs
+    cd $generationDIR/figs
     cp -rf $xDIR/data/*.pdf . 
-    cd $xDIR
     cd $benchDIR
 done
 
-cd $currentDIR/example
-exampleDIR=$PWD
-for folder in *; do
-    cd $folder 
-    xDIR=$PWD
-    ./Allrun.sh &> log.run
-    cd $reportDIR/figs
-    cp -rf $xDIR/data/*.pdf . 
-    cd $xDIR
-    cd $exampleDIR
-done
 
-cd $reportDIR
+cd $generationDIR
 ./generate.sh
