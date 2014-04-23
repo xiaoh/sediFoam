@@ -138,6 +138,22 @@
             << endl;
     }
 
+    // default bw/Dx value if not defined in dictionary
+    scalar diffusionBandWidth = 0.006;
+    if (cloudProperties.found("diffusionBandWidth"))
+    {
+        diffusionBandWidth =
+            readScalar
+            (
+                cloudProperties.lookup("diffusionBandWidth")
+            );
+    }
+    else
+    {
+        Info<< "*** Diffusion band width set to 0.006 by default"
+            << endl;
+    }
+
 
     dimensionedScalar rhob
     (

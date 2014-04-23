@@ -42,6 +42,9 @@ SourceFiles
 #include "meshForWeighting.H"
 #include "dragModel.H"
 #include "vectorList.H"
+#include "fvPatchField.H"
+#include "volMesh.H"
+#include "simpleControl.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -108,6 +111,10 @@ class enhancedCloud
         //- Fluid density
         // scalar rhob_;
 
+        Time diffusionRunTime_;
+        fvMesh diffusionMesh_;
+        simpleControl simple_;
+
 
     // Private Member Functions
 
@@ -122,6 +129,13 @@ class enhancedCloud
         void initEnsemble();
         void accumulateEnsemble();
         void computeEnsemble();
+
+        //- Use diffusion equation to smooth ensembled fields.
+        // template <class valueType>
+        // void smoothField(GeometricField <valueType, fvPatchField, volMesh> & fieldIn);
+
+        void smoothField(volScalarField& );
+        void smoothField(volVectorField& );
 
         //- Calculate weight for the cells related to this particle
         void calcWeightGroup
@@ -182,7 +196,8 @@ public:
              volScalarField& alpha,
              IOdictionary& cloudDict,
              IOdictionary& transDict,
-             scalar bwDxRatio
+             scalar bwDxRatio,
+             scalar diffusionBandWidth
         );
 
 

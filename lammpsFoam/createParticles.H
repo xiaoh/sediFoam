@@ -19,7 +19,8 @@ enhancedCloud cloud
     alpha,
     cloudProperties,
     transportProperties,
-    bwDxRatio
+    bwDxRatio,
+    diffusionBandWidth 
 );
 
 // Also update/create MD-related fields.

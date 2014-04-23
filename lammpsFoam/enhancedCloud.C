@@ -321,7 +321,8 @@ enhancedCloud::enhancedCloud
     volScalarField& alpha,
     IOdictionary& cloudDict,
     IOdictionary& transDict,
-    scalar bwDxRatio
+    scalar bwDxRatio,
+    scalar diffusionBandWidth
 )
 :
     softParticleCloud(vpi, U, p, Ue, nu, alpha, cloudDict),
@@ -363,7 +364,24 @@ enhancedCloud::enhancedCloud
            dimensionSet(1, -2, -2, 0, 0),
            vector::zero
         )
-    )
+     ),
+    diffusionRunTime_
+    (
+        "controlDiffDict",
+        runTime().rootPath(),
+        runTime().caseName()
+    ),
+    diffusionMesh_
+    (
+        Foam::IOobject
+        (
+            Foam::fvMesh::defaultRegion,
+            diffusionRunTime_.timeName(),
+            diffusionRunTime_,
+            Foam::IOobject::MUST_READ
+        )
+    ),
+    simple_(diffusionMesh_)
 {
     weightPtr_ = NULL;
     particleCellPtr_ = NULL;
@@ -374,10 +392,62 @@ enhancedCloud::enhancedCloud
 
     // a threshhold to turn on box-car option
     // don't change the hard-coded threhold value!
-    if (bwDxRatio < 0.2)
+    if (bwDxRatio < 0.2 || Pstream::parRun())
         boxCar_ = true;
     else
         boxCar_ = false;
+
+    if (Pstream::parRun())
+    {
+	    Info<< "Use boxCar + diffusion method "
+            << "for parallel computing cases." <<  endl << endl;
+    }
+
+    forAllIter(softParticleCloud, *this, iter)
+    {
+        softParticle& p = iter();
+
+        label cellI = p.cell();
+
+        // alpha field
+        gamma_.internalField()[cellI] +=
+            p.Vol();
+    }
+
+    surfaceScalarField phi
+    (
+        IOobject
+        (
+            "phi",
+            runTime().timeName(),
+            mesh_,
+            IOobject::NO_READ,
+            IOobject::AUTO_WRITE
+        ),
+        vector(1,1,1) & mesh_.Sf()
+    );
+
+    scalarField sumPhi
+    (
+        fvc::surfaceSum(mag(phi))().internalField()
+    );
+
+    scalar courantNo = 
+        0.5*pow(gMax(sumPhi/mesh_.V().field()),2)*runTime().deltaTValue();
+    scalar courantTimeStep = 
+        1/(0.5*pow(gMax(sumPhi/mesh_.V().field()),2));
+    
+    Info<< "Current Courant No is: " << courantNo << endl;
+    Info<< "Best time step is: " << courantTimeStep << endl;
+
+    scalar diffusionTime = pow(diffusionBandWidth,2)/4;
+    scalar diffusionDeltaT = courantTimeStep;
+    scalar nDiffusionTimeStep = ceil(diffusionTime/diffusionDeltaT);
+    diffusionDeltaT = diffusionTime/nDiffusionTimeStep;
+    diffusionRunTime_.setEndTime(diffusionTime);
+    diffusionRunTime_.setDeltaT(diffusionDeltaT);
+    Info<< "diffusion time is: " << diffusionTime << endl;
+    Info<< "diffusion time step is: " << diffusionDeltaT << endl;
 
     // initial quantities for dragModel
     pDia_.setSize(particleCount_);
@@ -558,6 +628,116 @@ void  enhancedCloud::computeEnsemble()
 }
 
 
+//- comments
+//- comments
+// template <class valueType>
+// void enhancedCloud::smoothField(GeometricField <valueType, fvPatchField, volMesh> & sFieldIn)
+// {
+//   valueType  diffWorkField
+//     (
+//        IOobject
+//          (
+//             "tempDiffu",
+//             diffusionRunTime_.timeName(),
+//             diffusionMesh_,
+//             IOobject::NO_READ,
+//             IOobject::NO_WRITE
+//         ),
+//        diffusionMesh_,
+//        sFieldIn.dimension(),
+//        sFieldIn.internalField(),
+//        zeroGradientFvPatchScalarField::typeName
+//      );
+// 
+//   dimensionedScalar DT("DT", dimensionSet(0, 2, -1, 0, 0), 1.0);
+// 
+//   solve( fvm::ddt(diffWorkField) - fvm::laplacian(DT, diffWorkField) );
+// 
+//   sFieldIn.internalField() = diffWorkField.internalField();
+// }
+
+void enhancedCloud::smoothField(volScalarField& sFieldIn)
+{
+    volScalarField diffWorkField
+    (
+        IOobject
+        (
+            "tempDiffu",
+            diffusionRunTime_.timeName(),
+            diffusionMesh_,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        diffusionMesh_,
+        dimensionedScalar
+        (
+            "zero",
+            dimless,
+            scalar(0.0)
+        ),
+        zeroGradientFvPatchScalarField::typeName
+    );
+
+    diffWorkField.internalField() = sFieldIn.internalField();
+
+    dimensionedScalar DT("DT", dimensionSet(0, 2, -1, 0, 0), 1.0);
+
+    scalar startTime = diffusionRunTime_.startTimeIndex();
+    label startIndex = diffusionRunTime_.timeIndex();
+    while (diffusionRunTime_.loop())
+    {
+        while (simple_.correctNonOrthogonal())
+        {
+            solve(fvm::ddt(diffWorkField) - fvm::laplacian(DT, diffWorkField));
+        }
+    }
+    diffusionRunTime_.setTime(startTime,startIndex);
+
+    sFieldIn.internalField() = diffWorkField.internalField();
+}
+
+
+void enhancedCloud::smoothField(volVectorField& sFieldIn)
+{
+    volVectorField diffWorkField
+    (
+        IOobject
+        (
+            "tempDiffu",
+            diffusionRunTime_.timeName(),
+            diffusionMesh_,
+            IOobject::NO_READ,
+            IOobject::NO_WRITE
+        ),
+        diffusionMesh_,
+        dimensionedVector
+        (
+            "zero",
+            dimless,
+            vector::zero
+        ),
+        zeroGradientFvPatchScalarField::typeName
+    );
+
+    diffWorkField.internalField() = sFieldIn.internalField();
+
+    dimensionedScalar DT("DT", dimensionSet(0, 2, -1, 0, 0), 1.0);
+
+    scalar startTime = diffusionRunTime_.startTimeIndex();
+    label startIndex = diffusionRunTime_.timeIndex();
+    while (diffusionRunTime_.loop())
+    {
+        while (simple_.correctNonOrthogonal())
+        {
+            solve(fvm::ddt(diffWorkField) - fvm::laplacian(DT, diffWorkField));
+        }
+    }
+    diffusionRunTime_.setTime(startTime,startIndex);
+
+    sFieldIn.internalField() = diffWorkField.internalField();
+}
+
+
 //- Calculate the weight for a group. Should be inline.
 //  Called only by calcCellWeights() for each particle.
 inline void enhancedCloud::calcWeightGroup
@@ -639,16 +819,16 @@ void enhancedCloud::particleToEulerianField()
 
         forAll(particleWeights()[particleI], neiI)
         {
-            label cellI = particleCells()[particleI][neiI];
-            scalar weight = particleWeights()[particleI][neiI];
+            // label cellI = particleCells()[particleI][neiI];
+            // scalar weight = particleWeights()[particleI][neiI];
 
             // alpha field
-            gamma_.internalField()[cellI] +=
-                p.Vol()*weight;
+            // gamma_.internalField()[cellI] +=
+            //     p.Vol()*weight;
 
             // particle velocity field
-            Ue_.internalField()[cellI] +=
-                p.Vol()*p.U()*weight;
+            // Ue_.internalField()[cellI] +=
+            //     p.Vol()*p.U()*weight;
 
             // should be mass-averaged velocity.
             // but the density data have not been obtained from Lammps yet.
@@ -658,16 +838,50 @@ void enhancedCloud::particleToEulerianField()
         ++pIter;
     }
 
+    forAllIter(softParticleCloud, *this, iter)
+    {
+        softParticle& p = iter();
+
+        label cellI = p.cell();
+
+        // alpha field
+        gamma_.internalField()[cellI] +=
+            p.Vol();
+
+        Ue_.internalField()[cellI] +=
+            p.Vol()*p.U();
+    }
+
     gamma_.internalField() /= mesh_.V();
+
+    vector Utotal1(vector::zero);
 
     forAll(Ue_.internalField(), ceI)
     {
-        if (gamma_.internalField()[ceI] > 1e-10)
+        Utotal1 += Ue_.internalField()[ceI];
+    }
+
+    smoothField(gamma_);
+    smoothField(Ue_);
+
+    forAll(Ue_.internalField(), ceI)
+    {
+        if (gamma_.internalField()[ceI] > 1e-50)
         {
             Ue_.internalField()[ceI] /=
                 (mesh_.V()[ceI]*gamma_.internalField()[ceI]);
         }
     }
+
+    vector Utotal2(vector::zero);
+
+    forAll(Ue_.internalField(), ceI)
+    {
+        Utotal2 += Ue_.internalField()[ceI]*mesh_.V()[ceI]*gamma_.internalField()[ceI];
+    }
+
+    Info<< "total U before: " << Utotal1 << endl;
+    Info<< "total U after: " << Utotal2 << endl;
 
     if (pIter != end())
     {
