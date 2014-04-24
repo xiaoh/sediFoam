@@ -68,6 +68,9 @@ class enhancedCloud
         //- Fluid velocity
         const volVectorField& Uf_;
 
+        //- Diffused fluid velocity
+        volVectorField UfDiff_;
+
         //- box-car flag
         bool boxCar_;
 

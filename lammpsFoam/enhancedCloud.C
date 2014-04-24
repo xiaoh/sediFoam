@@ -182,7 +182,7 @@ void enhancedCloud::updateParticleUr()
             }
         */
 
-        wtUfi = Uf_[p.cell()];
+        wtUfi = UfDiff_[p.cell()];
         Uri_[particleI] = wtUfi - p.U();
         magUri_[particleI] = mag(Uri_[particleI]);
 
@@ -329,6 +329,7 @@ enhancedCloud::enhancedCloud
     meshForWeighting(U.mesh(), bwDxRatio),
     mesh_(U.mesh()),
     Uf_(Uf),
+    UfDiff_(Uf),
     Omega_
     (
         IOobject
@@ -432,18 +433,20 @@ enhancedCloud::enhancedCloud
         fvc::surfaceSum(mag(phi))().internalField()
     );
 
-    scalar courantNo = 
+    scalar courantNo =
         0.5*pow(gMax(sumPhi/mesh_.V().field()),2)*runTime().deltaTValue();
-    scalar courantTimeStep = 
+    scalar courantTimeStep =
         1/(0.5*pow(gMax(sumPhi/mesh_.V().field()),2));
-    
+
     Info<< "Current Courant No is: " << courantNo << endl;
     Info<< "Best time step is: " << courantTimeStep << endl;
 
     scalar diffusionTime = pow(diffusionBandWidth,2)/4;
+    Info<< "diffusion time is: " << diffusionTime << endl;
     scalar diffusionDeltaT = courantTimeStep;
     scalar nDiffusionTimeStep = ceil(diffusionTime/diffusionDeltaT);
-    diffusionDeltaT = diffusionTime/nDiffusionTimeStep;
+    Info<< "nDiffusionTimeStep is: " << nDiffusionTimeStep << endl;
+    diffusionDeltaT = diffusionTime/(nDiffusionTimeStep + SMALL);
     diffusionRunTime_.setEndTime(diffusionTime);
     diffusionRunTime_.setDeltaT(diffusionDeltaT);
     Info<< "diffusion time is: " << diffusionTime << endl;
@@ -481,6 +484,15 @@ enhancedCloud::enhancedCloud
     ensembleAlphaTimeFixed_ = ensembleAlpha_;
 
     setupParticleDia();
+
+    // smooth fluid velocity to initialise the lift&drag coefficients
+    // gamma is smoothed field since we smooth it in particleToEulerianField();
+    UfDiff_.internalField() =
+        Uf_.internalField()*mesh_.V()*(1 - gamma_.internalField());
+    smoothField(UfDiff_);
+
+    UfDiff_.internalField() /=
+        (mesh_.V()*(1 - gamma_.internalField()));
 }
 
 
@@ -511,6 +523,13 @@ void enhancedCloud::evolve()
     label Ns = subCycles_;
 
     initEnsemble();
+
+    UfDiff_.internalField() =
+        Uf_.internalField()*mesh_.V()*(1 - gamma_.internalField());
+    smoothField(UfDiff_);
+    
+    UfDiff_.internalField() /=
+        (mesh_.V()*(1 - gamma_.internalField()));
 
     // evolve Ns steps forward each time when Lammps is called.
     for (label k = 0; k < Ns; k++)
@@ -648,11 +667,11 @@ void  enhancedCloud::computeEnsemble()
 //        sFieldIn.internalField(),
 //        zeroGradientFvPatchScalarField::typeName
 //      );
-// 
+//
 //   dimensionedScalar DT("DT", dimensionSet(0, 2, -1, 0, 0), 1.0);
-// 
+//
 //   solve( fvm::ddt(diffWorkField) - fvm::laplacian(DT, diffWorkField) );
-// 
+//
 //   sFieldIn.internalField() = diffWorkField.internalField();
 // }
 
@@ -684,6 +703,9 @@ void enhancedCloud::smoothField(volScalarField& sFieldIn)
 
     scalar startTime = diffusionRunTime_.startTimeIndex();
     label startIndex = diffusionRunTime_.timeIndex();
+
+    Info<< "smoothing " << sFieldIn.name() << endl;
+
     while (diffusionRunTime_.loop())
     {
         while (simple_.correctNonOrthogonal())
@@ -725,6 +747,9 @@ void enhancedCloud::smoothField(volVectorField& sFieldIn)
 
     scalar startTime = diffusionRunTime_.startTimeIndex();
     label startIndex = diffusionRunTime_.timeIndex();
+
+    Info<< "smoothing " << sFieldIn.name() << endl;
+
     while (diffusionRunTime_.loop())
     {
         while (simple_.correctNonOrthogonal())
