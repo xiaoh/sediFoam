@@ -4,7 +4,7 @@ atom_style	sphere
 atom_modify	map array
 boundary	ff ff ff
 newton		off
-# processors  2 1 1
+processors  2 1 1
 
 communicate single vel yes
 read_data 	IC_uniform.in
