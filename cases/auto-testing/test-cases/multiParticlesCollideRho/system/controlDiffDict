@@ -1,7 +1,7 @@
 /*---------------------------------------------------------------------------*\
 | =========                 |                                                 |
 | \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
-|  \\    /   O peration     | Version:  1.0                                   |
+|  \\    /   O peration     | Version:  1.4                                   |
 |   \\  /    A nd           | Web:      http://www.openfoam.org               |
 |    \\/     M anipulation  |                                                 |
 \*---------------------------------------------------------------------------*/
@@ -17,21 +17,42 @@ FoamFile
     local           "";
 
     class           dictionary;
-    object          sprayProperties;
+    object          controlDict;
 }
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-interpolationSchemes
-{
-    U               cellPointFace;
+application     hybridFoam;
+
+startFrom       startTime;
+
+startTime       0;
+
+stopAt          endTime;
+
+endTime         0.2;
+
+deltaT          0.001;
+
+writeControl    runTime;
+
+writeInterval   0.01;
+
+purgeWrite      0;
+
+writeFormat     ascii;
+
+writePrecision  6;
+
+writeCompression uncompressed;
+
+timeFormat      general;
+
+timePrecision   6;
+
+runTimeModifiable yes;
+
 }
-
-g 		(0 -10 0);
-
-dragModel   SyamlalOBrien;
-subCycles	2;
-diffusionBandWidth  0.005;
 
 
 // ************************************************************************* //

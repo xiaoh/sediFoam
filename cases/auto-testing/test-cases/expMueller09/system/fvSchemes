@@ -24,7 +24,7 @@ FoamFile
 
 ddtSchemes
 {
-    default Euler;
+    default backward;
 }
 
 gradSchemes
@@ -50,6 +50,8 @@ laplacianSchemes
     laplacian(nuEffa,Ua) Gauss linear corrected;
     laplacian(nuEffb,Ub) Gauss linear corrected;
     laplacian((rho*(1|A(U))),p) Gauss linear corrected;
+    laplacian(1,alpha) Gauss linear corrected;
+    laplacian(DT,tempDiffu) Gauss linear corrected;
 }
 
 interpolationSchemes

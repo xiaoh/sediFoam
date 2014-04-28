@@ -59,6 +59,14 @@ alpha
     relTol          0;
 }
 
+tempDiffu
+{
+    solver          PCG;
+    preconditioner  DIC;
+    tolerance       1e-10;
+    relTol          0;
+}
+
 // using new solver syntax:
 beta
 {
@@ -96,6 +104,11 @@ PISO
     correctAlpha    no;
     pRefCell        0;
     pRefValue       0;
+}
+
+SIMPLE
+{
+    nNonOrthogonalCorrectors 0;
 }
 
 
