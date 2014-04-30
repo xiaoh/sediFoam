@@ -304,6 +304,12 @@ void enhancedCloud::calcTcFields()
             }
         */
     }
+    Asrc_.internalField() =
+        Asrc_.internalField()*mesh_.V()*(1 - gamma_.internalField());
+    smoothField(Asrc_);
+
+    Asrc_.internalField() /=
+        (mesh_.V()*(1 - gamma_.internalField()));
 }
 
 
@@ -322,7 +328,8 @@ enhancedCloud::enhancedCloud
     IOdictionary& cloudDict,
     IOdictionary& transDict,
     scalar bwDxRatio,
-    scalar diffusionBandWidth
+    scalar diffusionBandWidth,
+    scalar diffusionSteps
 )
 :
     softParticleCloud(vpi, U, p, Ue, nu, alpha, cloudDict),
@@ -445,8 +452,10 @@ enhancedCloud::enhancedCloud
     Info<< "diffusion time is: " << diffusionTime << endl;
     scalar diffusionDeltaT = courantTimeStep;
     scalar nDiffusionTimeStep = ceil(diffusionTime/diffusionDeltaT);
-    Info<< "nDiffusionTimeStep is: " << nDiffusionTimeStep << endl;
-    diffusionDeltaT = diffusionTime/(nDiffusionTimeStep + SMALL);
+    Info<< "explicit DiffusionTimeStep is: " << nDiffusionTimeStep << endl;
+    Info<< "implicit DiffusionTimeStep is: " << diffusionSteps << endl;
+
+    diffusionDeltaT = diffusionTime/(diffusionSteps + SMALL);
     diffusionRunTime_.setEndTime(diffusionTime);
     diffusionRunTime_.setDeltaT(diffusionDeltaT);
     Info<< "diffusion time is: " << diffusionTime << endl;
@@ -681,7 +690,7 @@ void enhancedCloud::smoothField(volScalarField& sFieldIn)
     (
         IOobject
         (
-            "tempDiffu",
+            "tempDiffScalar",
             diffusionRunTime_.timeName(),
             diffusionMesh_,
             IOobject::NO_READ,
@@ -725,7 +734,7 @@ void enhancedCloud::smoothField(volVectorField& sFieldIn)
     (
         IOobject
         (
-            "tempDiffu",
+            "tempDiffVector",
             diffusionRunTime_.timeName(),
             diffusionMesh_,
             IOobject::NO_READ,
@@ -738,7 +747,7 @@ void enhancedCloud::smoothField(volVectorField& sFieldIn)
             dimless,
             vector::zero
         ),
-        zeroGradientFvPatchScalarField::typeName
+        zeroGradientFvPatchVectorField::typeName
     );
 
     diffWorkField.internalField() = sFieldIn.internalField();
@@ -887,12 +896,12 @@ void enhancedCloud::particleToEulerianField()
     Info<< "total U before: " << Utotal1 << endl;
     Info<< "total U after: " << Utotal2 << endl;
 
-    if (pIter != end())
-    {
-        FatalErrorIn("enhancedCloud::particleToEulerianField")
-            << "Inconsistent particle correspondance."
-            << abort(FatalError);
-    }
+    // if (pIter != end())
+    // {
+    //     FatalErrorIn("enhancedCloud::particleToEulerianField")
+    //         << "Inconsistent particle correspondance."
+    //         << abort(FatalError);
+    // }
 }
 
 

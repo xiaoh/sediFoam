@@ -20,7 +20,8 @@ enhancedCloud cloud
     cloudProperties,
     transportProperties,
     bwDxRatio,
-    diffusionBandWidth 
+    diffusionBandWidth,
+    diffusionSteps
 );
 
 // Also update/create MD-related fields.

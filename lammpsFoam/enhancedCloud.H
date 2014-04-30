@@ -200,7 +200,8 @@ public:
              IOdictionary& cloudDict,
              IOdictionary& transDict,
              scalar bwDxRatio,
-             scalar diffusionBandWidth
+             scalar diffusionBandWidth,
+             scalar diffusionSteps
         );
 
 

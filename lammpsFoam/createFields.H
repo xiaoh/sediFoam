@@ -138,7 +138,7 @@
             << endl;
     }
 
-    // default bw/Dx value if not defined in dictionary
+    // default diffusion band width if not defined in dictionary
     scalar diffusionBandWidth = 0.006;
     if (cloudProperties.found("diffusionBandWidth"))
     {
@@ -154,7 +154,7 @@
             << endl;
     }
 
-    // default bw/Dx value if not defined in dictionary
+    // default max alpha if not defined in dictionary
     scalar maxPossibleAlpha = 0.70;
     if (cloudProperties.found("maxPossibleAlpha"))
     {
@@ -170,6 +170,21 @@
             << endl;
     }
 
+    // default diffusion steps if not defined in dictionary
+    scalar diffusionSteps = 6;
+    if (cloudProperties.found("diffusionSteps"))
+    {
+        diffusionSteps =
+            readScalar
+            (
+                cloudProperties.lookup("diffusionSteps")
+            );
+    }
+    else
+    {
+        Info<< "*** Diffusion steps set to 6 by default"
+            << endl;
+    }
 
     dimensionedScalar rhob
     (
