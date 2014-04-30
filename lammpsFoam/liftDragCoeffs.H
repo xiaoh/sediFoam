@@ -2,12 +2,12 @@
     volVectorField Ur = Ua - Ub;
     volScalarField magUr = mag(Ur);
 
-    scalar maxPossibleAlpha = scalar(0.70);
+    // scalar maxPossibleAlpha = scalar(0.70);
     if (max(alpha).value() > maxPossibleAlpha)
     {
         Info<< "Warning: Unphysical large solid volume fraction "
             << max(alpha).value() << endl;
-        Info<< "A cap of 0.70 is applied." << endl;
+        Info<< "A cap of " << maxPossibleAlpha << " is applied." << endl;
 
         alpha = Foam::min(alpha, maxPossibleAlpha);
         beta = scalar(1) - alpha;

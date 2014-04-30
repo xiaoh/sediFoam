@@ -154,6 +154,22 @@
             << endl;
     }
 
+    // default bw/Dx value if not defined in dictionary
+    scalar maxPossibleAlpha = 0.70;
+    if (cloudProperties.found("maxPossibleAlpha"))
+    {
+        maxPossibleAlpha =
+            readScalar
+            (
+                cloudProperties.lookup("maxPossibleAlpha")
+            );
+    }
+    else
+    {
+        Info<< "*** Max possible alpha set to 0.70 by default"
+            << endl;
+    }
+
 
     dimensionedScalar rhob
     (

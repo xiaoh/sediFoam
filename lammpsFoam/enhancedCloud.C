@@ -835,34 +835,7 @@ void enhancedCloud::particleToEulerianField()
     gamma_.internalField() *= 0.0;
     Ue_.internalField() *= 0.0;
 
-    softParticleCloud::iterator pIter = begin();
-    forAll(particleWeights(), particleI)
-    {
-        softParticle& p = pIter();
-
-        if (p.cell() < 0) { ++pIter; continue;}
-
-        forAll(particleWeights()[particleI], neiI)
-        {
-            // label cellI = particleCells()[particleI][neiI];
-            // scalar weight = particleWeights()[particleI][neiI];
-
-            // alpha field
-            // gamma_.internalField()[cellI] +=
-            //     p.Vol()*weight;
-
-            // particle velocity field
-            // Ue_.internalField()[cellI] +=
-            //     p.Vol()*p.U()*weight;
-
-            // should be mass-averaged velocity.
-            // but the density data have not been obtained from Lammps yet.
-            // use volume average for now.
-        }
-
-        ++pIter;
-    }
-
+    // obtain alpha and Ua field
     forAllIter(softParticleCloud, *this, iter)
     {
         softParticle& p = iter();
@@ -879,6 +852,8 @@ void enhancedCloud::particleToEulerianField()
 
     gamma_.internalField() /= mesh_.V();
 
+    // Utotal1 and Utotal2 are calculated to show that 
+    // the momentum is conservative
     vector Utotal1(vector::zero);
 
     forAll(Ue_.internalField(), ceI)
@@ -886,12 +861,13 @@ void enhancedCloud::particleToEulerianField()
         Utotal1 += Ue_.internalField()[ceI];
     }
 
+    // smooth alpha and Ua field
     smoothField(gamma_);
     smoothField(Ue_);
 
     forAll(Ue_.internalField(), ceI)
     {
-        if (gamma_.internalField()[ceI] > 1e-50)
+        if (gamma_.internalField()[ceI] > 1e-99)
         {
             Ue_.internalField()[ceI] /=
                 (mesh_.V()[ceI]*gamma_.internalField()[ceI]);
@@ -904,6 +880,9 @@ void enhancedCloud::particleToEulerianField()
     {
         Utotal2 += Ue_.internalField()[ceI]*mesh_.V()[ceI]*gamma_.internalField()[ceI];
     }
+
+    reduce(Utotal1, sumOp<vector>());
+    reduce(Utotal2, sumOp<vector>());
 
     Info<< "total U before: " << Utotal1 << endl;
     Info<< "total U after: " << Utotal2 << endl;
