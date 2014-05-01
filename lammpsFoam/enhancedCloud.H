@@ -58,7 +58,6 @@ namespace Foam
 class enhancedCloud
 :
     public softParticleCloud
-    public meshForWeighting
 {
     // Private data
 
@@ -102,11 +101,6 @@ class enhancedCloud
         vectorField Uri_;
         scalarField magUri_;
 
-        //- List/Field of ensemble quantities
-        scalarField ensembleAlpha_;
-        scalarField ensembleAlphaTimeFixed_;
-        label ensembleCount_;
-
         //- Eulerian Fields for Tc
         volScalarField Omega_;
         volVectorField Asrc_;
@@ -134,19 +128,6 @@ class enhancedCloud
 
         void smoothField(volScalarField& );
         void smoothField(volVectorField& );
-
-        //- Calculate weight for the cells related to this particle
-        void calcWeightGroup
-        (
-            scalarList& weight,
-            softParticle& p,
-            label& cellI,
-            int& i
-        );
-
-        //- Update weight list corresponding to particles
-        //- and the cell list itself
-        void updateCellWeights();
 
         //- Setup particle diameter
         void setupParticleDia();
