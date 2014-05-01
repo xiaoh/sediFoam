@@ -59,7 +59,15 @@ alpha
     relTol          0;
 }
 
-tempDiffu
+tempDiffScalar
+{
+    solver          PCG;
+    preconditioner  DIC;
+    tolerance       1e-10;
+    relTol          0;
+}
+
+tempDiffVector
 {
     solver          PCG;
     preconditioner  DIC;

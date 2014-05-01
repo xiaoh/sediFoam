@@ -31,7 +31,7 @@ g 		(0 -10 0);
 
 dragModel   SyamlalOBrien;
 subCycles	2;
-diffusionBandWidth  0.005;
+diffusionBandWidth  0.0045;
 
 
 // ************************************************************************* //

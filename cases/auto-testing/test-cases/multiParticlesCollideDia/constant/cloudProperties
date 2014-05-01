@@ -27,11 +27,11 @@ interpolationSchemes
     U               cellPointFace;
 }
 
-g 		(0 -9.8 0);
+g 		(0 -10 0);
 
 dragModel   SyamlalOBrien;
 subCycles	2;
-diffusionBandWidth  0.01;
+diffusionBandWidth  0.0045;
 
 
 // ************************************************************************* //
