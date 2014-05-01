@@ -31,77 +31,6 @@ namespace Foam
 
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 
-//- Update weights corresponding to all particles.
-void enhancedCloud::updateCellWeights()
-{
-    if (!weightPtr_)
-    {
-        // create storage for weight list if not allocated yet
-        weightPtr_ = new scalarListList(particleCount_);
-    }
-
-    if (!particleCellPtr_)
-    {
-        // create storage for cell list if not allocated yet
-        particleCellPtr_ = new labelListList(particleCount_);
-    }
-
-    // if particle number modified
-    if (particleCount_ != size())
-    {
-        Pout<< "Warning: enhancedCloud::updateCellWeights: "
-            << "softParticleCloud object modified! "
-            << " Particle count before: " << particleCount_
-            << " Particle count now: " << size()
-            << endl;
-        particleCount_ = size();
-        reAllocateLists(); // Re-allocate lists
-    }
-
-    scalarListList& pCellWeights = *weightPtr_;
-    labelListList& pCellLabels = *particleCellPtr_;
-
-    int particleI = 0;
-    for
-    (
-        softParticleCloud::iterator pIter = softParticleCloud::begin();
-        pIter != softParticleCloud::end();
-        ++pIter, ++particleI
-    )
-    {
-        softParticle& p = pIter();
-        label cellP = p.cell();
-
-        if (cellP<0) continue;
-
-        const labelList& neiCellIDs = vertexCellCells()[cellP];
-        label neiN = neiCellIDs.size();
-
-        pCellWeights[particleI].setSize(neiN+1);
-        pCellLabels[particleI].setSize(neiN+1);
-
-        // update the neighbor cells of this particle
-        forAll(neiCellIDs, neiI)
-        {
-            label ncID = neiCellIDs[neiI];
-            pCellLabels[particleI][neiI] = ncID;
-        }
-
-        // finally, the cell associated with this particle.
-        pCellLabels[particleI][neiN] = cellP;
-
-        // calculate normalized weights of cells for this particle
-        calcWeightGroup
-        (
-            pCellWeights[particleI],
-            p,
-            cellP,
-            particleI
-        );
-    }
-}
-
-
 //- Setup particle diameter list
 //  called in constructor
 void enhancedCloud::setupParticleDia()
@@ -136,8 +65,7 @@ void  enhancedCloud::updateParticleAlpha()
         softParticle& p = pIter();
         label cellI = p.cell();
         if (cellI<0) continue;
-        // pAlpha_[particleI] = gamma_[cellI];
-        pAlpha_[particleI] = ensembleAlphaTimeFixed_[cellI];
+        pAlpha_[particleI] = gamma_[cellI];
     }
 }
 
@@ -153,7 +81,7 @@ void enhancedCloud::updateParticleUr()
     Uri_.setSize(particleCount_);
     magUri_.setSize(particleCount_);
 
-    forAll(particleWeights(), particleI)
+    forAll(particleWeights(), particleI)  // TODO: Change iterator
     {
         softParticle& p = pIter();
         if (p.cell() < 0)
@@ -165,34 +93,10 @@ void enhancedCloud::updateParticleUr()
         }
 
         // velocity of the fluid
-        vector wtUfi(vector::zero);
-
-        /*
-            forAll(particleWeights()[particleI], neiI)
-            {
-                label cellI = particleCells()[particleI][neiI];
-                scalar weight = particleWeights()[particleI][neiI];
-                #ifdef DEBUG_ENH
-                Info<< "cellI: " << cellI
-                    << " Ucell: " << Uf_[cellI]
-                    << " weight: " << weight
-                    << endl;
-                #endif
-                wtUfi += weight*Uf_[cellI];
-            }
-        */
-
-        wtUfi = UfDiff_[p.cell()];
-        Uri_[particleI] = wtUfi - p.U();
+        Uri_[particleI] = UfDiff_[p.cell()] - p.U();
         magUri_[particleI] = mag(Uri_[particleI]);
 
         ++pIter;
-
-#ifdef DEBUG_ENH
-        Info<< "particle U: " << p.U()
-            << " weight Ufi: " <<  wtUfi
-            <<" Uri: " << Uri_[particleI] << endl;
-#endif
     }
 
     if (pIter != end())
@@ -273,43 +177,45 @@ void enhancedCloud::calcTcFields()
 
     Jd_ = drag_->Jd(magUri_);
 
-    // scan particle list to average and get Omega & Asrc field
-    softParticleCloud::iterator pIter = begin();
-    forAll(particleWeights(), particleI)
+
+    if (semiImplicit)
     {
-        softParticle& p = pIter();
-
-        // update Omega field (fluid density omitted)
-        label cellI = p.cell();
-
-        if (cellI < 0) continue;
-
-        scalar omg = p.Vol()*Jd_[particleI]/(mesh_.V()[cellI]);
-        Omega_.internalField()[cellI] += omg;
-        Asrc_.internalField()[cellI] += omg*p.ensembleU();
-        ++pIter;
-        /*
-            forAll(particleWeights()[particleI], neiI)
-            {
-                label cellI = particleCells()[particleI][neiI];
-                scalar weight = particleWeights()[particleI][neiI];
-
-                // Update Omega field (density omitted)
-                scalar omg = weight*
-                    p.Vol()*Jd_[particleI]/(mesh_.V()[p.cell()]);
-
-                // This is still debating ...
-                Omega_.internalField()[cellI] += omg;
-                Asrc_.internalField()[cellI] += omg * ensPU_[particleI];
-            }
-        */
+    
     }
+    else
+    {
+        Omega_.internalField()[cellI] += omg;
+        
+        // scan particle list to average and get Omega & Asrc field
+        softParticleCloud::iterator pIter = begin();
+        forAll(particleWeights(), particleI)
+        {
+            softParticle& p = pIter();
+            
+            // update Omega field (fluid density omitted)
+            label cellI = p.cell();
+            
+            if (cellI < 0) continue;
+            
+            scalar omg = p.Vol()*Jd_[particleI]/(mesh_.V()[cellI]);
+
+            // accumulate drag from particles to host cells
+            // to be smoothed later!
+            Asrc_.internalField()[cellI] += omg*(p.U() - p.Uf());
+            ++pIter;
+    }
+
+        // TODO: Derive the conservative way of diffusion; implement, and check numerically.
+    // Smoothing operations
     Asrc_.internalField() =
-        Asrc_.internalField()*mesh_.V()*(1 - gamma_.internalField());
+            Asrc_.internalField()*(1 - gamma_.internalField());
     smoothField(Asrc_);
 
     Asrc_.internalField() /=
         (mesh_.V()*(1 - gamma_.internalField()));
+    
+    // TODO: assert particle total force equal Eulerian field total force
+
 }
 
 
@@ -470,27 +376,12 @@ enhancedCloud::enhancedCloud
     // initialise drag force on each particle
     pDrag_ = vectorList(particleCount_);
 
-    // initialise ensemble velocity on each particle
-    for
-    (
-        softParticleCloud::iterator pIter = softParticleCloud::begin();
-        pIter != softParticleCloud::end();
-        ++pIter
-    )
-    {
-        softParticle& p = pIter();
-        p.ensembleU() = p.U();
-    }
-
-    // initialize cell weights
-    updateCellWeights();
 
     // initialize alpha field and Ue
     particleToEulerianField();
 
-    // setup ensAlpha_
-    ensembleAlpha_ = gamma_.internalField();
-    ensembleAlphaTimeFixed_ = ensembleAlpha_;
+    // gamma_.internalField();
+
 
     setupParticleDia();
 
@@ -531,8 +422,6 @@ void enhancedCloud::evolve()
 
     label Ns = subCycles_;
 
-    initEnsemble();
-
     UfDiff_.internalField() =
         Uf_.internalField()*mesh_.V()*(1 - gamma_.internalField());
     smoothField(UfDiff_);
@@ -569,8 +458,6 @@ void enhancedCloud::evolve()
         Cloud<softParticle>::move(td0, mesh_.time().deltaTValue());
         // setPositionCell();
 
-        updateCellWeights();
-
         // make sure all particles are in cell.
         // assertParticleInCell();
 
@@ -580,80 +467,14 @@ void enhancedCloud::evolve()
         // change Eulerian (mesh-based) alpha field
         particleToEulerianField();
 
-        accumulateEnsemble();
-
         delete [] XLocal;
         delete [] VLocal;
     }
-
-    // compute ensembled value after n iterations
-    computeEnsemble();
 
     Info<< "After this cycle, "
         << size() << " local particles has been moved. " << endl;
 }
 
-
-//- Initialize ensemble average of alpha and particle velocity
-void  enhancedCloud::initEnsemble()
-{
-    // set accumulation count to zero.
-    ensembleCount_ = 0;
-    ensembleAlpha_ *= 0.0;
-
-    for
-    (
-        softParticleCloud::iterator pIter = softParticleCloud::begin();
-        pIter != softParticleCloud::end();
-        ++pIter
-    )
-    {
-        softParticle& p = pIter();
-        p.ensembleU() = vector::zero;
-    }
-}
-
-
-//- Accumulate ensemble average of alpha and particle velocity.
-//  Warning: using ensemblePU_ and ensembleAlpha_ during sub-stepping is error!
-void  enhancedCloud::accumulateEnsemble()
-{
-    ++ensembleCount_;
-
-    // accumulate Alpha for ensemble
-    ensembleAlpha_ += gamma_.internalField();
-
-    // accumulate particle velocity for ensemble
-    for
-    (
-        softParticleCloud::iterator pIter = softParticleCloud::begin();
-        pIter != softParticleCloud::end();
-        ++pIter
-    )
-    {
-        softParticle& p = pIter();
-        p.ensembleU() += p.U();
-    }
-}
-
-
-//- Compute ensemble average of alpha and particle velocity
-void  enhancedCloud::computeEnsemble()
-{
-    ensembleAlpha_ /= ensembleCount_;
-    ensembleAlphaTimeFixed_ = ensembleAlpha_;
-
-    for
-    (
-        softParticleCloud::iterator pIter = softParticleCloud::begin();
-        pIter != softParticleCloud::end();
-        ++pIter
-    )
-    {
-        softParticle& p = pIter();
-        p.ensembleU() /= ensembleCount_;
-    }
-}
 
 
 //- comments
@@ -772,72 +593,6 @@ void enhancedCloud::smoothField(volVectorField& sFieldIn)
 }
 
 
-//- Calculate the weight for a group. Should be inline.
-//  Called only by calcCellWeights() for each particle.
-inline void enhancedCloud::calcWeightGroup
-(
-    scalarList& weight,
-    softParticle& p,
-    label& cellI,
-    int& i
-)
-{
-    const labelList& neiCellIDs = vertexCellCells()[cellI];
-    scalar dist = 0.0;
-    scalar totalWt = 0.0;
-    label neiN = neiCellIDs.size();
-
-    // short circuit if bwDxRatio is smaller than a threshold.
-    if (boxCar_)
-    {
-        weight = 0.0;
-        weight[neiN] = 1.0;
-        totalWt = 1.0;
-        return;
-    }
-
-    forAll(neiCellIDs, neiI)
-    {
-        label ncID = neiCellIDs[neiI];
-        dist = mag(p.position()- mesh_.C()[ncID]);
-        weight[neiI] = kernel(dist);
-        totalWt += weight[neiI];
-    }
-
-    // now, the cell this particle belongs to
-    dist = mag(p.position()-mesh_.C()[cellI]);
-    weight[neiN] = kernel(dist);
-    totalWt += weight[neiN];
-
-    // bandwidth too small for this cell.
-    if (totalWt < 1e-4)
-    {
-        Pout<< "Warning: Bandwidth too small for this cell." << endl
-            << " cell ID: " << cellI
-            << " Particle ID: " << i
-            << " neighbors ID: " << neiCellIDs
-            << " particle x: "  << p.position()
-            << " associated cell center: " << mesh_.C()[cellI]
-            << " Distance: " << dist
-            << " weight: " << weight
-            << endl;
-
-        // Box-car kernel function of improper band width specified.
-        weight = 0.0; weight[neiN] = 1.0; totalWt = 1.0;
-    }
-    else
-    {
-        // normalize all weight by total weight
-        forAll(neiCellIDs, neiI)
-        {
-            weight[neiI] /= totalWt;
-        }
-
-        weight[neiN] /= totalWt;
-    }
-}
-
-
 //- Refresh Ue, and Gamma using Gaussian averaging
 void enhancedCloud::particleToEulerianField()
 {
@@ -916,34 +671,6 @@ const labelListList& enhancedCloud::particleCells()
 }
 
 
-const scalarListList& enhancedCloud::particleWeights()
-{
-    if (!weightPtr_)
-    {
-        updateCellWeights();
-    }
-
-    return *weightPtr_;
-}
-
-
-//- Reallocate listLists if particle number has changed.
-void enhancedCloud::reAllocateLists() const
-{
-    if (weightPtr_)
-    {
-        delete weightPtr_;
-        weightPtr_ = new scalarListList(particleCount_);
-    }
-
-    if (particleCellPtr_)
-    {
-        delete particleCellPtr_;
-        particleCellPtr_ = new labelListList(particleCount_);
-    }
-}
-
-
 //- Check if all particles in fluid cells
 //  It is in this class because it used to depend on neighbour info.
 //  Not any more though.
@@ -951,7 +678,7 @@ void enhancedCloud::assertParticleInCell()
 {
     softParticleCloud::iterator pIter = begin();
 
-    forAll(particleCells(), particleI)
+    forAll(particleCells(), particleI) // TODO: Change the iterator
     {
         softParticle& p = pIter();
         point& pos = p.position();
@@ -977,13 +704,6 @@ void enhancedCloud::assertParticleInCell()
     }
 
 } // End function
-
-
-void enhancedCloud::weightInfo()
-{
-    Info<< "particleCells: " << particleCells() << endl;
-    Info<< "particleWeights: " << particleWeights() << endl;
-}
 
 
 //- Display sum of drag as Eulerian field

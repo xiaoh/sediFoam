@@ -26,7 +26,7 @@ Class
     enhancedCloud
 
 Description
-    softParticleCloud with averaging features (via meshForWeighting)
+    softParticleCloud with averaging features
     and dragModel
 
 SourceFiles
@@ -57,7 +57,7 @@ namespace Foam
 
 class enhancedCloud
 :
-    public softParticleCloud,
+    public softParticleCloud
     public meshForWeighting
 {
     // Private data
@@ -128,11 +128,6 @@ class enhancedCloud
         //- Reallocate listLists if particle number has changed.
         void reAllocateLists() const;
 
-        //- Ensemble averaging function (alpha & Ue)
-        void initEnsemble();
-        void accumulateEnsemble();
-        void computeEnsemble();
-
         //- Use diffusion equation to smooth ensembled fields.
         // template <class valueType>
         // void smoothField(GeometricField <valueType, fvPatchField, volMesh> & fieldIn);
@@ -167,13 +162,6 @@ class enhancedCloud
         //- Compute averge quantities
         //- particle quantities --> Eulerian quantities
         void particleToEulerianField();
-
-        //- Compute ensemble average of particle velocity (list)
-        //- and alpha field
-        void ensembleParticleVelocity();
-
-        //- Compute ensemble average of volume fraction
-        void ensembleAlpha();
 
         //- drag on each particle
         //- update pDrag_
