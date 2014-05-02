@@ -64,7 +64,11 @@ void  enhancedCloud::updateParticleAlpha()
     {
         softParticle& p = pIter();
         label cellI = p.cell();
-        if (cellI<0) continue;
+        if (cellI<0) 
+        {
+            Pout << "cell not found!" << endl;
+            continue;
+        }
         pAlpha_[particleI] = gamma_[cellI];
     }
 }
@@ -76,12 +80,16 @@ void  enhancedCloud::updateParticleAlpha()
 //  Also called after each substep.
 void enhancedCloud::updateParticleUr()
 {
-    softParticleCloud::iterator pIter = begin();
-
     Uri_.setSize(particleCount_);
     magUri_.setSize(particleCount_);
 
-    forAll(particleWeights(), particleI)  // TODO: Change iterator
+    label particleI = 0;
+    for
+    (
+        softParticleCloud::iterator pIter = softParticleCloud::begin();
+        pIter != softParticleCloud::end();
+        ++pIter, ++particleI
+    )
     {
         softParticle& p = pIter();
         if (p.cell() < 0)
@@ -93,17 +101,8 @@ void enhancedCloud::updateParticleUr()
         }
 
         // velocity of the fluid
-        Uri_[particleI] = UfDiff_[p.cell()] - p.U();
+        Uri_[particleI] = UfSmoothed_[p.cell()] - p.U();
         magUri_[particleI] = mag(Uri_[particleI]);
-
-        ++pIter;
-    }
-
-    if (pIter != end())
-    {
-        FatalErrorIn("enhancedCloud::updateParticleUr()")
-            << "Inconsistent particle correspondance."
-            << abort(FatalError);
     }
 }
 
@@ -178,43 +177,94 @@ void enhancedCloud::calcTcFields()
     Jd_ = drag_->Jd(magUri_);
 
 
+    bool semiImplicit = 0;
     if (semiImplicit)
     {
-    
+        // Scan particle list to average and get Omega & Asrc field
+        label particleI = 0;
+        for
+        (
+            softParticleCloud::iterator pIter = softParticleCloud::begin();
+            pIter != softParticleCloud::end();
+            ++pIter, ++particleI
+        )
+        {
+            softParticle& p = pIter();
+
+            // Update Omega field (fluid density omitted)
+            label cellI = p.cell();
+            if(cellI < 0) continue;
+            scalar omg = p.Vol()*Jd_[particleI]/(mesh_.V()[cellI]);
+            Omega_.internalField()[cellI] += omg;
+            Asrc_.internalField()[cellI] += omg * p.U();
+            ++pIter;
+        }
+
     }
     else
     {
-        Omega_.internalField()[cellI] += omg;
-        
         // scan particle list to average and get Omega & Asrc field
-        softParticleCloud::iterator pIter = begin();
-        forAll(particleWeights(), particleI)
+        label particleI = 0;
+        for
+        (
+            softParticleCloud::iterator pIter = softParticleCloud::begin();
+            pIter != softParticleCloud::end();
+            ++pIter, ++particleI
+        )
         {
             softParticle& p = pIter();
-            
+
             // update Omega field (fluid density omitted)
             label cellI = p.cell();
-            
+
             if (cellI < 0) continue;
-            
+
             scalar omg = p.Vol()*Jd_[particleI]/(mesh_.V()[cellI]);
 
             // accumulate drag from particles to host cells
             // to be smoothed later!
-            Asrc_.internalField()[cellI] += omg*(p.U() - p.Uf());
-            ++pIter;
-    }
+            Asrc_.internalField()[cellI] += omg*(p.U() - UfSmoothed_[cellI]);
+        }
+
+        Omega_.internalField() *= 0;
+
+        // F1 and F2 are calculated to show that
+        // the momentum is conservative
+        vector Ftotal1(vector::zero);
+
+        forAll(Asrc_.internalField(), ceI)
+        {
+            Ftotal1 += 
+                Asrc_.internalField()[ceI]*mesh_.V()[ceI]*(1 - gamma_.internalField()[ceI]);
+        }
 
         // TODO: Derive the conservative way of diffusion; implement, and check numerically.
-    // Smoothing operations
-    Asrc_.internalField() =
-            Asrc_.internalField()*(1 - gamma_.internalField());
-    smoothField(Asrc_);
+        // Smoothing operations
+        Asrc_.internalField() =
+                Asrc_.internalField()*(1 - gamma_.internalField());
+        smoothField(Asrc_);
 
-    Asrc_.internalField() /=
-        (mesh_.V()*(1 - gamma_.internalField()));
-    
-    // TODO: assert particle total force equal Eulerian field total force
+        Asrc_.internalField() /=
+            (1 - gamma_.internalField());
+
+        // TODO: assert particle total force equal Eulerian field total force
+
+        // F1 and F2 are calculated to show that
+        // the momentum is conservative
+        vector Ftotal2(vector::zero);
+
+        forAll(Asrc_.internalField(), ceI)
+        {
+            Ftotal2 += 
+                Asrc_.internalField()[ceI]*mesh_.V()[ceI]*(1 - gamma_.internalField()[ceI]);
+        }
+
+        reduce(Ftotal1, sumOp<vector>());
+        reduce(Ftotal2, sumOp<vector>());
+
+        Info<< "total F before: " << Ftotal1 << endl;
+        Info<< "total F after: " << Ftotal2 << endl;
+    }
 
 }
 
@@ -239,10 +289,9 @@ enhancedCloud::enhancedCloud
 )
 :
     softParticleCloud(vpi, U, p, Ue, nu, alpha, cloudDict),
-    meshForWeighting(U.mesh(), bwDxRatio),
     mesh_(U.mesh()),
     Uf_(Uf),
-    UfDiff_(Uf),
+    UfSmoothed_(Uf),
     Omega_
     (
         IOobject
@@ -251,7 +300,7 @@ enhancedCloud::enhancedCloud
             runTime().timeName(),
             mesh_,
             IOobject::NO_READ,
-            IOobject::NO_WRITE
+            IOobject::AUTO_WRITE
         ),
         mesh_,
         dimensionedScalar
@@ -269,7 +318,7 @@ enhancedCloud::enhancedCloud
             runTime().timeName(),
             mesh_,
             IOobject::NO_READ,
-            IOobject::NO_WRITE
+            IOobject::AUTO_WRITE
         ),
         mesh_,
         dimensionedVector
@@ -277,7 +326,8 @@ enhancedCloud::enhancedCloud
            "zero",
            dimensionSet(1, -2, -2, 0, 0),
            vector::zero
-        )
+        ),
+        zeroGradientFvPatchVectorField::typeName
      ),
     diffusionRunTime_
     (
@@ -297,25 +347,9 @@ enhancedCloud::enhancedCloud
     ),
     simple_(diffusionMesh_)
 {
-    weightPtr_ = NULL;
-    particleCellPtr_ = NULL;
-
     drag_ = Foam::dragModel::New(cloudDict, transDict, pAlpha_, pDia_);
 
     particleCount_ = size();
-
-    // a threshhold to turn on box-car option
-    // don't change the hard-coded threhold value!
-    if (bwDxRatio < 0.2 || Pstream::parRun())
-        boxCar_ = true;
-    else
-        boxCar_ = false;
-
-    if (Pstream::parRun())
-    {
-	    Info<< "Use boxCar + diffusion method "
-            << "for parallel computing cases." <<  endl << endl;
-    }
 
     forAllIter(softParticleCloud, *this, iter)
     {
@@ -346,16 +380,13 @@ enhancedCloud::enhancedCloud
         fvc::surfaceSum(mag(phi))().internalField()
     );
 
-    scalar courantNo =
-        0.5*pow(gMax(sumPhi/mesh_.V().field()),2)*runTime().deltaTValue();
     scalar courantTimeStep =
         1/(0.5*pow(gMax(sumPhi/mesh_.V().field()),2));
 
-    Info<< "Current Courant No is: " << courantNo << endl;
     Info<< "Best time step is: " << courantTimeStep << endl;
 
     scalar diffusionTime = pow(diffusionBandWidth,2)/4;
-    Info<< "diffusion time is: " << diffusionTime << endl;
+
     scalar diffusionDeltaT = courantTimeStep;
     scalar nDiffusionTimeStep = ceil(diffusionTime/diffusionDeltaT);
     Info<< "explicit DiffusionTimeStep is: " << nDiffusionTimeStep << endl;
@@ -377,22 +408,19 @@ enhancedCloud::enhancedCloud
     pDrag_ = vectorList(particleCount_);
 
 
-    // initialize alpha field and Ue
+    // initialize alpha and Ue field
     particleToEulerianField();
-
-    // gamma_.internalField();
-
 
     setupParticleDia();
 
     // smooth fluid velocity to initialise the lift&drag coefficients
     // gamma is smoothed field since we smooth it in particleToEulerianField();
-    UfDiff_.internalField() =
-        Uf_.internalField()*mesh_.V()*(1 - gamma_.internalField());
-    smoothField(UfDiff_);
+    UfSmoothed_.internalField() =
+        Uf_.internalField()*(1 - gamma_.internalField());
+    smoothField(UfSmoothed_);
 
-    UfDiff_.internalField() /=
-        (mesh_.V()*(1 - gamma_.internalField()));
+    UfSmoothed_.internalField() /=
+        (1 - gamma_.internalField());
 }
 
 
@@ -400,17 +428,6 @@ enhancedCloud::enhancedCloud
 
 enhancedCloud::~enhancedCloud()
 {
-    if (weightPtr_)
-    {
-        delete weightPtr_;
-        weightPtr_ = 0;
-    }
-
-    if (particleCellPtr_)
-    {
-        delete particleCellPtr_;
-        particleCellPtr_ = 0;
-    }
 }
 
 
@@ -422,12 +439,13 @@ void enhancedCloud::evolve()
 
     label Ns = subCycles_;
 
-    UfDiff_.internalField() =
-        Uf_.internalField()*mesh_.V()*(1 - gamma_.internalField());
-    smoothField(UfDiff_);
-    
-    UfDiff_.internalField() /=
-        (mesh_.V()*(1 - gamma_.internalField()));
+    UfSmoothed_.internalField() =
+        Uf_.internalField()*(1 - gamma_.internalField());
+
+    smoothField(UfSmoothed_);
+
+    UfSmoothed_.internalField() /=
+        (1 - gamma_.internalField());
 
     // evolve Ns steps forward each time when Lammps is called.
     for (label k = 0; k < Ns; k++)
@@ -456,10 +474,20 @@ void enhancedCloud::evolve()
 
         // move particle to the new position
         Cloud<softParticle>::move(td0, mesh_.time().deltaTValue());
-        // setPositionCell();
+
+        if (particleCount_ != size())
+        {
+            Pout<< "Warning: enhancedCloud::evolve: "
+                << "particle number modified! "
+                << "Particle number before: " << particleCount_
+                << "Particle number now: " << size()
+                << endl;
+
+            particleCount_ = size();
+        }
 
         // make sure all particles are in cell.
-        // assertParticleInCell();
+        assertParticleInCell();
 
         // update Uri (relative particle velocities) here.
         updateParticleUr();
@@ -471,7 +499,7 @@ void enhancedCloud::evolve()
         delete [] VLocal;
     }
 
-    Info<< "After this cycle, "
+    Pout<< "After this cycle, "
         << size() << " local particles has been moved. " << endl;
 }
 
@@ -593,7 +621,7 @@ void enhancedCloud::smoothField(volVectorField& sFieldIn)
 }
 
 
-//- Refresh Ue, and Gamma using Gaussian averaging
+//- Refresh Ue and Gamma using Gaussian averaging
 void enhancedCloud::particleToEulerianField()
 {
     gamma_.internalField() *= 0.0;
@@ -616,7 +644,7 @@ void enhancedCloud::particleToEulerianField()
 
     gamma_.internalField() /= mesh_.V();
 
-    // Utotal1 and Utotal2 are calculated to show that 
+    // Utotal1 and Utotal2 are calculated to show that
     // the momentum is conservative
     vector Utotal1(vector::zero);
 
@@ -625,16 +653,18 @@ void enhancedCloud::particleToEulerianField()
         Utotal1 += Ue_.internalField()[ceI];
     }
 
+    Ue_.internalField() /= mesh_.V();
+
     // smooth alpha and Ua field
     smoothField(gamma_);
     smoothField(Ue_);
 
     forAll(Ue_.internalField(), ceI)
     {
-        if (gamma_.internalField()[ceI] > 1e-99)
+        if (gamma_.internalField()[ceI] > ROOTVSMALL)
         {
             Ue_.internalField()[ceI] /=
-                (mesh_.V()[ceI]*gamma_.internalField()[ceI]);
+                (gamma_.internalField()[ceI]);
         }
     }
 
@@ -648,26 +678,8 @@ void enhancedCloud::particleToEulerianField()
     reduce(Utotal1, sumOp<vector>());
     reduce(Utotal2, sumOp<vector>());
 
-    Info<< "total U before: " << Utotal1 << endl;
-    Info<< "total U after: " << Utotal2 << endl;
-
-    // if (pIter != end())
-    // {
-    //     FatalErrorIn("enhancedCloud::particleToEulerianField")
-    //         << "Inconsistent particle correspondance."
-    //         << abort(FatalError);
-    // }
-}
-
-
-const labelListList& enhancedCloud::particleCells()
-{
-    if (!particleCellPtr_)
-    {
-        updateCellWeights();
-    }
-
-    return *particleCellPtr_;
+    Info<< "total U solid before: " << Utotal1 << endl;
+    Info<< "total U solid after: " << Utotal2 << endl;
 }
 
 
@@ -678,14 +690,14 @@ void enhancedCloud::assertParticleInCell()
 {
     softParticleCloud::iterator pIter = begin();
 
-    forAll(particleCells(), particleI) // TODO: Change the iterator
+    forAllIter(softParticleCloud, *this, iter)
     {
         softParticle& p = pIter();
         point& pos = p.position();
 
         bool found = false;
 
-        label lCellI = p.cell();
+        label lCellI = mesh_.findCell(pos);
 
         if (lCellI >= 0) found = true;
 
@@ -694,16 +706,13 @@ void enhancedCloud::assertParticleInCell()
             WarningIn("enhancedCloud::assertParticleInCell()")
                 << "Particle outside fluid domain!" << endl
                 << " Debug Info: "
-                << " Particle ID: " << particleI
                 << " Particle Position: " << pos
                 << " Associated cell ID: " << p.cell()
                 << abort(FatalError);
         }
-
-        ++pIter;
     }
 
-} // End function
+}
 
 
 //- Display sum of drag as Eulerian field

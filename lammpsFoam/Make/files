@@ -2,7 +2,6 @@ lammpsFoam.C
 softParticle.C
 softParticleIO.C
 softParticleCloud.C
-meshForWeighting.C
 enhancedCloud.C
 
 EXE = $(FOAM_USER_APPBIN)/lammpsFoam

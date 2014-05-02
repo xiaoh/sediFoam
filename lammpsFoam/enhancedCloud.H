@@ -39,7 +39,6 @@ SourceFiles
 
 #include "softParticle.H"
 #include "softParticleCloud.H"
-#include "meshForWeighting.H"
 #include "dragModel.H"
 #include "vectorList.H"
 #include "fvPatchField.H"
@@ -67,17 +66,8 @@ class enhancedCloud
         //- Fluid velocity
         const volVectorField& Uf_;
 
-        //- Diffused fluid velocity
-        volVectorField UfDiff_;
-
-        //- box-car flag
-        bool boxCar_;
-
-        //- Normalized weight list
-        mutable scalarListList* weightPtr_;
-
-        //- Particle cell list (associated cell and it neighbors)
-        mutable labelListList* particleCellPtr_;
+        //- Smoothed fluid velocity
+        volVectorField UfSmoothed_;
 
         //- Number of particles as remembered by weight operations
         label particleCount_;
@@ -114,13 +104,6 @@ class enhancedCloud
 
 
     // Private Member Functions
-
-        const scalarListList& particleWeights();
-
-        const labelListList& particleCells();
-
-        //- Reallocate listLists if particle number has changed.
-        void reAllocateLists() const;
 
         //- Use diffusion equation to smooth ensembled fields.
         // template <class valueType>
@@ -201,20 +184,11 @@ public:
                 return Asrc_;
             }
 
-            //- Whether box-car weight should be used.
-            bool boxCar() const
-            {
-                return boxCar_;
-            }
-
             //- Return number of particles in the cloud
             label particleCount() const
             {
                 return particleCount_;
             }
-
-            //- Print particle weight & particle cells
-            void weightInfo();
 
             //- Print particle drag sum-up field
             //--- Not parallel yet.
