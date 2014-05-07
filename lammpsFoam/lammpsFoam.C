@@ -60,6 +60,8 @@ int main(int argc, char *argv[])
     Info<< "\nStarting time loop\n" << endl;
     #include "liftDragCoeffs.H"
 
+    scalarList splitTime(2,0.0);
+
     while (runTime.run())
     {
         runTime++;
@@ -86,6 +88,8 @@ int main(int argc, char *argv[])
             */
         }
 
+        splitTime[0] += runTime.cpuTimeIncrement();
+
         #include "DDtU.H"
         #include "kEpsilon.H"
 
@@ -94,8 +98,12 @@ int main(int argc, char *argv[])
         #include "liftDragCoeffs.H"
         #include "write.H"
 
+        splitTime[1] += runTime.cpuTimeIncrement();
+
         Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
             << "  ClockTime = " << runTime.elapsedClockTime() << " s"
+            << "  OpenFOAM/LAMMPS = (" << splitTime[0] << ", "
+            << splitTime[1] << ") s"
             << nl << endl;
     }
 
