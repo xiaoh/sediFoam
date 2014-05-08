@@ -30,13 +30,13 @@ startTime       0;
 
 stopAt          endTime;
 
-endTime         10;
+endTime         30;
 
-deltaT          0.0001;
+deltaT          0.001;
 
 writeControl    runTime;
 
-writeInterval   1;
+writeInterval   0.5;
 
 purgeWrite      0;
 
@@ -52,56 +52,36 @@ timePrecision   6;
 
 runTimeModifiable yes;
 
+functions
+{
+    probes
+    {
+        type                probes;
+        functionObjectLibs  ("libsampling.so");
+        outputControl       timeStep;
+        outputInterval      1;
+        probeLocations
+        (
+            (0.02 0.002 0.003) 
+            (0.02 0.16 0.003) 
+            (0.01 0.002 0.003) 
+            (0.01 0.16 0.003) 
+            (0.002 0.002 0.003) 
+            (0.002 0.16 0.003) 
+            (0.002 0.04 0.003) 
+            (0.038 0.002 0.003) 
+            (0.038 0.04 0.003) 
+            (0.03 0.002 0.003) 
+            (0.03 0.04 0.003) 
+        );
+        fields
+        (
+            p
+            Ub
+        );
+    }
 
-functions 
-{ 
-    fieldAverage1 
-    { 
-        type                fieldAverage; 
-        functionObjectLibs  ("libfieldFunctionObjects.so"); 
-        enabled             true;
-        timeStart           2;
-        timeEnd             15;
-        outputControl       outputTime;
- 
-    fields 
-    ( 
-        p 
-        {
-            mean        on;
-            prime2Mean  on;
-            base        time;
-        }
+}
 
-        Ub
-        {
-            mean        on;
-            prime2Mean  on;
-            base        time;
-        }
-
-        Ua
-        {
-            mean        on;
-            prime2Mean  on;
-            base        time;
-        }
-
-        alpha
-        {
-            mean        on;
-            prime2Mean  on;
-            base        time;
-        }
-
-        Uc
-        {
-            mean        on;
-            prime2Mean  on;
-            base        time;
-        }
-    ); 
-    } 
-};
 
 // ************************************************************************* //

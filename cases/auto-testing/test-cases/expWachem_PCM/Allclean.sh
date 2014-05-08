@@ -5,6 +5,7 @@ cd constant/polyMesh
 rm -rf boundary points faces neighbour owner
 cd ../..
 rm -rf data/*.xy
+rm -rf data/p.dat
 rm -rf data/*.pdf
 rm -rf processor*
 rm -rf *[1-9]*
