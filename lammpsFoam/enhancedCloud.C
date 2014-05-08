@@ -271,7 +271,7 @@ void enhancedCloud::calcTcFields()
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-//- Construct from components
+//- Construct from component
 enhancedCloud::enhancedCloud
 (
     const volPointInterpolation& vpi,
@@ -345,7 +345,9 @@ enhancedCloud::enhancedCloud
             Foam::IOobject::MUST_READ
         )
     ),
-    simple_(diffusionMesh_)
+    simple_(diffusionMesh_),
+    diffusionTimeCount_(0.0),
+    particleMoveTime_(0.0)
 {
     drag_ = Foam::dragModel::New(cloudDict, transDict, pAlpha_, pDia_);
 
@@ -472,8 +474,11 @@ void enhancedCloud::evolve()
         // (Harvest XLocal & VLocal)  Lammps --> Cloud
         setPositionVelo(XLocal, VLocal);
 
+        diffusionRunTime_.cpuTimeIncrement();
         // move particle to the new position
         Cloud<softParticle>::move(td0, mesh_.time().deltaTValue());
+
+        particleMoveTime_ += diffusionRunTime_.cpuTimeIncrement();
 
         if (particleCount_ != size())
         {
@@ -501,6 +506,8 @@ void enhancedCloud::evolve()
 
     Pout<< "After this cycle, "
         << size() << " local particles has been moved. " << endl;
+    Info<< "Diffusion/particle movint Time is: " << diffusionTimeCount_ 
+        << "/" << particleMoveTime_ << "." << endl;
 }
 
 
@@ -535,6 +542,7 @@ void enhancedCloud::evolve()
 
 void enhancedCloud::smoothField(volScalarField& sFieldIn)
 {
+    diffusionRunTime_.cpuTimeIncrement();
     volScalarField diffWorkField
     (
         IOobject
@@ -574,11 +582,13 @@ void enhancedCloud::smoothField(volScalarField& sFieldIn)
     diffusionRunTime_.setTime(startTime,startIndex);
 
     sFieldIn.internalField() = diffWorkField.internalField();
+    diffusionTimeCount_ += diffusionRunTime_.cpuTimeIncrement();
 }
 
 
 void enhancedCloud::smoothField(volVectorField& sFieldIn)
 {
+    diffusionRunTime_.cpuTimeIncrement();
     volVectorField diffWorkField
     (
         IOobject
@@ -618,6 +628,7 @@ void enhancedCloud::smoothField(volVectorField& sFieldIn)
     diffusionRunTime_.setTime(startTime,startIndex);
 
     sFieldIn.internalField() = diffWorkField.internalField();
+    diffusionTimeCount_ += diffusionRunTime_.cpuTimeIncrement();
 }
 
 

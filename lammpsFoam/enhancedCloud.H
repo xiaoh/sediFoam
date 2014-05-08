@@ -102,6 +102,9 @@ class enhancedCloud
         fvMesh diffusionMesh_;
         simpleControl simple_;
 
+        scalar diffusionTimeCount_;
+        scalar particleMoveTime_;
+
 
     // Private Member Functions
 
@@ -188,6 +191,18 @@ public:
             label particleCount() const
             {
                 return particleCount_;
+            }
+
+            //- Return total diffusion time
+            const scalar& diffusionTimeCount() const
+            {
+                return diffusionTimeCount_;
+            }
+
+            //- Return total diffusion time
+            const scalar& particleMoveTime() const
+            {
+                return particleMoveTime_;
             }
 
             //- Print particle drag sum-up field

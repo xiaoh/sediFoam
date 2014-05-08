@@ -102,8 +102,11 @@ int main(int argc, char *argv[])
 
         Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
             << "  ClockTime = " << runTime.elapsedClockTime() << " s"
-            << "  OpenFOAM/LAMMPS = (" << splitTime[0] << ", "
-            << splitTime[1] << ") s"
+            << "  OpenFOAM/particle(all)/diffusion/particle move = (" 
+            << splitTime[0] << ", "
+            << splitTime[1] << ", "
+            << cloud.diffusionTimeCount() << ", "
+            << cloud.particleMoveTime() << ") s"
             << nl << endl;
     }
 
