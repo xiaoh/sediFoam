@@ -90,6 +90,9 @@ class softParticleCloud
             //- Particle ID in LAMMPS
             int* tagArray_;
 
+            //- Processor ID of the particles in LAMMPS
+            int* lmpCpuIdArray_;
+
             //- Particle type
             int* typeArray_;
 
@@ -154,6 +157,7 @@ class softParticleCloud
                 double* d,
                 double* rho,
                 int* tag,
+                int* lmpCpuId,
                 int* type
             );
 

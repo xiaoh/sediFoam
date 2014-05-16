@@ -137,8 +137,11 @@ void lammps_get_coord_velo(void *ptr, double *coords, double *velos)
 // Not extened to provide particle diameter, density, and type as well.
 // The name will, however, not be updated.
 void lammps_get_info(void* ptr, double* coords, double* velos, double* diam,
-                     double* rho_, int* tag_, int* type_)
+                     double* rho_, int* tag_, int* lmpCpuId_, int* type_)
 {
+  int myrank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+
   LAMMPS *lammps = (LAMMPS *) ptr;
   int natoms = static_cast<int> (lammps->atom->natoms);
 
@@ -148,6 +151,7 @@ void lammps_get_info(void* ptr, double* coords, double* velos, double* diam,
   double *copyRho = new double[natoms];
   int *copytype = new int[natoms];
   int *copytag = new int[natoms];
+  int *copylmpCpuId = new int[natoms];
 
   for (int i = 0; i < 3*natoms; i++) {
     copyx[i] = 0.0;
@@ -159,6 +163,7 @@ void lammps_get_info(void* ptr, double* coords, double* velos, double* diam,
     copyRho[i] = 0.0;
     copytype[i] = 0;
     copytag[i] = 0;
+    copylmpCpuId[i] = 0;
   }
 
   //Info provided to Foam Cloud.
@@ -196,6 +201,7 @@ void lammps_get_info(void* ptr, double* coords, double* velos, double* diam,
     // Copy type
     copytype[id-1] = type[i];
     copytag[id-1] = tag[i];
+    copylmpCpuId[id-1] = myrank;
   }
 
   MPI_Allreduce(copyx, coords, 3*natoms, MPI_DOUBLE, MPI_SUM,
@@ -204,6 +210,7 @@ void lammps_get_info(void* ptr, double* coords, double* velos, double* diam,
   MPI_Allreduce(copyd, diam, natoms, MPI_DOUBLE, MPI_SUM, lammps->world);
   MPI_Allreduce(copyRho, rho_, natoms, MPI_DOUBLE, MPI_SUM, lammps->world);
   MPI_Allreduce(copytag, tag_, natoms, MPI_INT, MPI_SUM, lammps->world);
+  MPI_Allreduce(copylmpCpuId, lmpCpuId_, natoms, MPI_INT, MPI_SUM, lammps->world);
   MPI_Allreduce(copytype, type_, natoms, MPI_INT, MPI_SUM, lammps->world);
 
   delete [] copyx;
@@ -211,6 +218,7 @@ void lammps_get_info(void* ptr, double* coords, double* velos, double* diam,
   delete [] copyd;
   delete [] copyRho;
   delete [] copytag;
+  delete [] copylmpCpuId;
   delete [] copytype;
 }
 

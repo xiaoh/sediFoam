@@ -139,6 +139,7 @@ public:
 		     const vector& U,
              const scalar& rhos,
              const label& tag,
+             const label& lmpCpuId,
              const label& type
 		);
 
@@ -241,7 +242,7 @@ public:
             //- Return global ID
             label& pLmpCpuId()
             {
-                return lamCpuId_;
+                return lmpCpuId_;
             }
 
             //- Return particle type

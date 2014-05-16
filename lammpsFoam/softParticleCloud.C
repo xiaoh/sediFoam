@@ -126,6 +126,7 @@ void softParticleCloud::initLammps()
     // A few more
     rhoArray_ = new double [nGlobal_];
     tagArray_ = new int [nGlobal_];
+    lmpCpuIdArray_ = new int [nGlobal_];
     typeArray_ = new int [nGlobal_];
 
     // xArray_ etc. are info-complete (All-reduced)
@@ -137,6 +138,7 @@ void softParticleCloud::initLammps()
         dArray_,
         rhoArray_,
         tagArray_,
+        lmpCpuIdArray_,
         typeArray_
     );
 
@@ -148,6 +150,7 @@ void softParticleCloud::initLammps()
         dArray_,
         rhoArray_,
         tagArray_,
+        lmpCpuIdArray_,
         typeArray_
     );
 
@@ -219,6 +222,7 @@ void softParticleCloud::initConstructParticles
    double* d,
    double* rho,
    int* tag,
+   int* lmpCpuId,
    int* type
 )
 {
@@ -263,6 +267,7 @@ void softParticleCloud::initConstructParticles
         scalar ds = scalar(d[i]);
         scalar rhos = scalar(rho[i]);
         label tags = scalar(tag[i]);
+        label lmpCpuIds = scalar(lmpCpuId[i]);
         label types = scalar(type[i]);
 
         // create a new softParticle when it is in the current processor
@@ -279,6 +284,7 @@ void softParticleCloud::initConstructParticles
                     velo,
                     rhos,
                     tags,
+                    lmpCpuIds,
                     types
                 );
 
@@ -287,6 +293,7 @@ void softParticleCloud::initConstructParticles
                 Pout<< "position is:" << pos << endl;
                 Pout<< "cell is:" << cellI << endl;
                 Pout<< "foam tag is:" << tags << endl;
+                Pout<< "lammps CPU id is:" << lmpCpuId << endl;
                 Pout<< "type is:" << types << endl;
             }
             addParticle(ptr);
@@ -309,6 +316,7 @@ void softParticleCloud::finishLammps()
     delete [] fArray_;
     delete [] rhoArray_;
     delete [] tagArray_;
+    delete [] lmpCpuIdArray_;
     delete [] typeArray_;
 }
 

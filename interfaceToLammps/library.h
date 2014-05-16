@@ -36,7 +36,7 @@ extern "C" {
   void lammps_get_coord_velo(void *ptr, double *coords, double *velos);
   /* get atom x&v&d & rho & type */
   void lammps_get_info(void *ptr, double *coords, double *velos,
-                       double *diam, double* rho_, int* tag_, int* type_);
+                       double *diam, double* rho_, int* tag_, int* lmpCpuId_, int* type_);
   /* set atom x&v for all procs */
   void lammps_put_drag(void *ptr, double *fdrag);
   void lammps_step(void *ptr, int n);
