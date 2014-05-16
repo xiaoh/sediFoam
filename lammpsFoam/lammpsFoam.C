@@ -57,10 +57,12 @@ int main(int argc, char *argv[])
     #include "initContinuityErrs.H"
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
+    scalarList splitTime(2,0.0);
+
     Info<< "\nStarting time loop\n" << endl;
     #include "liftDragCoeffs.H"
-
-    scalarList splitTime(2,0.0);
+        
+    splitTime[1] += runTime.cpuTimeIncrement();
 
     while (runTime.run())
     {
