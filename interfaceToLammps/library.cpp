@@ -95,48 +95,11 @@ int lammps_get_natoms(void *ptr)
 
 /* ---------------------------------------------------------------------- */
 
-void lammps_get_coord_velo(void *ptr, double *coords, double *velos)
-{
-  LAMMPS *lammps = (LAMMPS *) ptr;
-  int natoms = static_cast<int> (lammps->atom->natoms);
-
-  double *copyx = new double[3*natoms];
-  double *copyv = new double[3*natoms];
-  for (int i = 0; i < 3*natoms; i++) {
-    copyx[i] = 0.0;
-    copyv[i] = 0.0;
-  }
-
-  double **x = lammps->atom->x;
-  double **v = lammps->atom->v;
-  int *tag = lammps->atom->tag;
-  int nlocal = lammps->atom->nlocal;
-
-  int id,offset;
-  for (int i = 0; i < nlocal; i++) {
-    id = tag[i];
-    offset = 3*(id-1);
-    copyx[offset+0] = x[i][0];
-    copyx[offset+1] = x[i][1];
-    copyx[offset+2] = x[i][2];
-    copyv[offset+0] = v[i][0];
-    copyv[offset+1] = v[i][1];
-    copyv[offset+2] = v[i][2];
-  }
-
-
-  MPI_Allreduce(copyx,coords,3*natoms,MPI_DOUBLE,MPI_SUM,lammps->world);
-  MPI_Allreduce(copyv,velos,3*natoms,MPI_DOUBLE,MPI_SUM,lammps->world);
-  delete [] copyx;
-  delete [] copyv;
-}
-
-
 /* ---------------------------------------------------------------------- */
 // Originaly designed to provide coordinate and velocity information to Foam
 // Not extened to provide particle diameter, density, and type as well.
 // The name will, however, not be updated.
-void lammps_get_info(void* ptr, double* coords, double* velos, double* diam,
+void lammps_get_initial_info(void* ptr, double* coords, double* velos, double* diam,
                      double* rho_, int* tag_, int* type_)
 {
   LAMMPS *lammps = (LAMMPS *) ptr;
@@ -212,6 +175,42 @@ void lammps_get_info(void* ptr, double* coords, double* velos, double* diam,
   delete [] copyRho;
   delete [] copytag;
   delete [] copytype;
+}
+
+
+/* ---------------------------------------------------------------------- */
+// Provide particle info (incl. coordinate, velocity etc.) to Foam
+// Note: No MPI communication occurs! Info is sent to the same processor.
+void lammps_get_coord_velo(void* ptr, double* coords_, double *velos,
+			   int* lmpCpuId_)
+{
+  int myrank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+
+  LAMMPS *lammps = (LAMMPS *) ptr;
+  int nlocal = lammps->atom->nlocal;
+
+  // Coordinate, velocity etc. on Lammps *local* processor
+  double **x = lammps->atom->x;
+  double **v = lammps->atom->v;
+
+  int offset;
+  for (int i = 0; i < nlocal; i++) {
+    offset = 3*(i-1);
+
+    // Get coordinates
+    coords_[offset+0] = x[i][0];
+    coords_[offset+1] = x[i][1];
+    corrds_[offset+2] = x[i][2];
+
+    // Copy velocities
+    velos_[offset+0] = v[i][0];
+    velos_[offset+1] = v[i][1];
+    velos_[offset+2] = v[i][2];
+
+    lmpCpuId_[i] = myrank;
+  }
+
 }
 
 /* ---------------------------------------------------------------------- */

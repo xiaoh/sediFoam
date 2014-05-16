@@ -119,17 +119,19 @@ void softParticleCloud::initLammps()
         << nGlobal_ << endl;
 
     // Setup temporary space for holding x & v for sending to Lammps.
+    // TODO: find no. of particle on my processor
     xArray_ = new double [3*nGlobal_];
     vArray_ = new double [3*nGlobal_];
     dArray_ = new double [nGlobal_];
     fArray_ = new double [3*nGlobal_];
-    // A few more
+
     rhoArray_ = new double [nGlobal_];
     tagArray_ = new int [nGlobal_];
+    lmpCpuIdArray_ = new int [nGlobal_];
     typeArray_ = new int [nGlobal_];
 
-    // xArray_ etc. are info-complete (All-reduced)
-    lammps_get_info
+    // xArray_ etc. are local to Lammps processor
+    lammps_get_initial_info
     (
         lmp_,
         xArray_,
