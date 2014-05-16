@@ -45,6 +45,7 @@ Foam::softParticle::softParticle
     ensembleU_(vector::zero),
     positionOld_(vector::zero),
     tag_(0),
+    lmpCpuId_(0),
     type_(0),
     density_(0.0)
 {
@@ -59,6 +60,7 @@ Foam::softParticle::softParticle
             is >> moveU_;
             is >> ensembleU_;
             is >> tag_;
+            is >> lmpCpuId_;
             is >> type_;
             density_ = readScalar(is);
         }
@@ -69,7 +71,7 @@ Foam::softParticle::softParticle
                reinterpret_cast<char*>(&d_),
                sizeof(mass_) + sizeof(d_)  + sizeof(positionOld_) + sizeof(U_)
              + sizeof(moveU_) + sizeof(ensembleU_) + sizeof(type_)
-             + sizeof(density_) + sizeof(tag_)
+             + sizeof(density_) + sizeof(tag_)  + sizeof(lmpCpuId_)
             );
           }
     }
@@ -79,6 +81,7 @@ Foam::softParticle::softParticle
     {
         Pout<< "creating a softParticle." << endl;
         Pout<< "tag is: " << tag_ << endl;
+        Pout<< "lmpCpuId is: " << lmpCpuId_ << endl;
         Pout<< "type is: " << type_ << endl;
 
         Pout<< "d is: " << d_ << endl;
@@ -114,6 +117,9 @@ void Foam::softParticle::readFields(Cloud<softParticle>& c)
     IOField<scalar> tag(c.fieldIOobject("tag", IOobject::MUST_READ));
     c.checkFieldIOobject(c, tag);
 
+    IOField<scalar> lmpCpuId(c.fieldIOobject("lmpCpuId", IOobject::MUST_READ));
+    c.checkFieldIOobject(c, lmpCpuId);
+
     IOField<scalar> type(c.fieldIOobject("type", IOobject::MUST_READ));
     c.checkFieldIOobject(c, type);
 
@@ -128,6 +134,7 @@ void Foam::softParticle::readFields(Cloud<softParticle>& c)
         p.d_ = d[i];
         p.density_ = density[i];
         p.tag_ = tag[i];
+        p.lmpCpuId_ = lmpCpuId[i];
         p.type_ = type[i];
         p.U_ = U[i];
         i++;
@@ -144,6 +151,7 @@ void softParticle::writeFields(const Cloud<softParticle>& c)
     IOField<scalar> d(c.fieldIOobject("d", IOobject::NO_READ), np);
     IOField<scalar> density(c.fieldIOobject("density", IOobject::NO_READ), np);
     IOField<label> tag(c.fieldIOobject("tag", IOobject::NO_READ), np);
+    IOField<label> lmpCpuId(c.fieldIOobject("lmpCpuId", IOobject::NO_READ), np);
     IOField<label> type(c.fieldIOobject("type", IOobject::NO_READ), np);
     IOField<vector> U(c.fieldIOobject("U", IOobject::NO_READ), np);
     IOField<vector> ensembleU
@@ -160,6 +168,7 @@ void softParticle::writeFields(const Cloud<softParticle>& c)
         d[i] = p.d_;
         density[i] = p.density_;
         tag[i] = p.tag_;
+        lmpCpuId[i] = p.lmpCpuId_;
         type[i] = p.type_;
         U[i] = p.U_;
         ensembleU[i] = p.ensembleU_;
@@ -168,6 +177,7 @@ void softParticle::writeFields(const Cloud<softParticle>& c)
 
     d.write();
     tag.write();
+    lmpCpuId.write();
     type.write();
     U.write();
     ensembleU.write();
@@ -183,23 +193,28 @@ void softParticle::writeFields(const Cloud<softParticle>& c, const label np)
     );
     IOField<scalar> d(c.fieldIOobject("d", IOobject::NO_READ), np);
     IOField<label> tag(c.fieldIOobject("tag", IOobject::NO_READ), np);
+    IOField<label> lmpCpuId(c.fieldIOobject("lmpCpuId", IOobject::NO_READ), np);
     IOField<label> type(c.fieldIOobject("type", IOobject::NO_READ), np);
     IOField<vector> U(c.fieldIOobject("U", IOobject::NO_READ), np);
+
     IOField<vector> ensembleU
     (
         c.fieldIOobject("ensembleU", IOobject::NO_READ),
         np
     );
+
     IOField<vector> positionsOld
     (
         c.fieldIOobject("positionsOld", IOobject::NO_READ),
         np
     );
+
     IOField<label> origProc
     (
         c.fieldIOobject("origProcId", IOobject::NO_READ),
         np
     );
+
     IOField<label> origId(c.fieldIOobject("origId", IOobject::NO_READ), np);
 
     label i = 0;
@@ -213,6 +228,7 @@ void softParticle::writeFields(const Cloud<softParticle>& c, const label np)
 
         d[i] = p.d_;
         tag[i] = p.tag_;
+        lmpCpuId[i] = p.lmpCpuId_;
         type[i] = p.type_;
         U[i] = p.U_;
         ensembleU[i] = p.ensembleU_;
@@ -228,6 +244,7 @@ void softParticle::writeFields(const Cloud<softParticle>& c, const label np)
     positionsOld.write();
     d.write();
     tag.write();
+    lmpCpuId.write();
     type.write();
     ensembleU.write();
     origProc.write();
@@ -244,6 +261,7 @@ Foam::Ostream& Foam::operator<<(Ostream& os, const softParticle& p)
         os  << static_cast<const particle&>(p)
             << token::SPACE << p.d_
             << token::SPACE << p.tag_
+            << token::SPACE << p.lmpCpuId_
             << token::SPACE << p.type_
             << token::SPACE << p.U_
             << token::SPACE << p.moveU_
@@ -258,7 +276,7 @@ Foam::Ostream& Foam::operator<<(Ostream& os, const softParticle& p)
         os.write
         (
             reinterpret_cast<const char*>(&p.d_),
-            sizeof(p.d_) + sizeof(p.tag_) + sizeof(p.type_) + sizeof(p.U_)
+            sizeof(p.d_) + sizeof(p.tag_) + sizeof(p.lmpCpuId_) + sizeof(p.type_) + sizeof(p.U_)
           + sizeof(p.moveU_) + sizeof(p.ensembleU_) + sizeof(p.mass_)
           + sizeof(p.density_) + sizeof(p.positionOld_)
         );

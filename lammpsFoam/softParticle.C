@@ -44,6 +44,7 @@ softParticle::softParticle
     const vector& U,
     const scalar& rhos,
     const label& tag,
+    const label& lmpCpuId,
     const label& type
 )
 :
@@ -55,6 +56,7 @@ softParticle::softParticle
     ensembleU_(vector::zero),
     positionOld_(vector::zero),
     tag_(tag),
+    lmpCpuId_(lmpCpuId),
     type_(type),
     density_(rhos)
 {

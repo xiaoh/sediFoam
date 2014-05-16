@@ -86,6 +86,9 @@ class softParticle
         //  Used as a global particle ID.
         label tag_;
 
+        //- Particle's last seen Lammps processor ID
+        label lmpCpuId_;
+
         //- Particle type. This variable is used to tell different
         //  type of particles (e.g., large or small, heavy or light).
         label type_;
@@ -233,6 +236,12 @@ public:
             label& ptag()
             {
                 return tag_;
+            }
+
+            //- Return global ID
+            label& pLmpCpuId()
+            {
+                return lamCpuId_;
             }
 
             //- Return particle type
