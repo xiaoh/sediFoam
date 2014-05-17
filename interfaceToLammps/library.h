@@ -29,19 +29,19 @@ extern "C" {
   void lammps_file(void *, char *);                 /* run input script */
   char *lammps_command(void *, char *);             /* execute a command */
 
-  void lammps_sync(void *ptr);
+  void lammps_sync(void* ptr);
   int lammps_get_natoms(void *);              /* return # of atoms */
 
   /* get atom x&v for all procs */
-  void lammps_get_coord_velo(void *ptr, double *coords, double *velos);
+  void lammps_get_coord_velo(void* ptr, double* coords, double* velos_, int* lmpCpuId_);
   /* get atom x&v&d & rho & type */
-  void lammps_get_info(void *ptr, double *coords, double *velos,
-                       double *diam, double* rho_, int* tag_, int* lmpCpuId_, int* type_);
+  void lammps_get_initial_info(void* ptr, double* coords, double* velos,
+                       double* diam, double* rho_, int* tag_, int* lmpCpuId_, int* type_);
   /* set atom x&v for all procs */
-  void lammps_put_drag(void *ptr, double *fdrag);
-  void lammps_step(void *ptr, int n);
-  void lammps_set_timestep(void *ptr, double dt_i);
-  double lammps_get_timestep(void *ptr);
+  void lammps_put_drag(void* ptr, double* fdrag);
+  void lammps_step(void* ptr, int n);
+  void lammps_set_timestep(void* ptr, double dt_i);
+  double lammps_get_timestep(void* ptr);
 #ifdef __cplusplus
 }
 #endif

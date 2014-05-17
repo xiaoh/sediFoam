@@ -119,18 +119,19 @@ void softParticleCloud::initLammps()
         << nGlobal_ << endl;
 
     // Setup temporary space for holding x & v for sending to Lammps.
+    // Note: global communication of particles is involved in the first step
     xArray_ = new double [3*nGlobal_];
     vArray_ = new double [3*nGlobal_];
     dArray_ = new double [nGlobal_];
     fArray_ = new double [3*nGlobal_];
-    // A few more
+
     rhoArray_ = new double [nGlobal_];
     tagArray_ = new int [nGlobal_];
     lmpCpuIdArray_ = new int [nGlobal_];
     typeArray_ = new int [nGlobal_];
 
-    // xArray_ etc. are info-complete (All-reduced)
-    lammps_get_info
+    // xArray_ etc. are local to Lammps processor
+    lammps_get_initial_info
     (
         lmp_,
         xArray_,
@@ -266,9 +267,9 @@ void softParticleCloud::initConstructParticles
 
         scalar ds = scalar(d[i]);
         scalar rhos = scalar(rho[i]);
-        label tags = scalar(tag[i]);
-        label lmpCpuIds = scalar(lmpCpuId[i]);
-        label types = scalar(type[i]);
+        label tags = int(tag[i]);
+        label lmpCpuIds = int(lmpCpuId[i]);
+        label types = int(type[i]);
 
         // create a new softParticle when it is in the current processor
         // but the computer is running much slower than before.
@@ -558,7 +559,7 @@ void  softParticleCloud::lammpsEvolveForward
     lammps_step(lmp_, nstep);
 
     // Harvest the lammps-updated x and v
-    lammps_get_coord_velo(lmp_, xArray_, vArray_);
+    lammps_get_coord_velo(lmp_, xArray_, vArray_, lmpCpuIdArray_);
 
     double* xArrayLocal = new double [3*size()];
     double* vArrayLocal = new double [3*size()];
