@@ -485,7 +485,7 @@ void softParticleCloud::setPositionCell()
 
 //  Temp placement; 
 
-// transport information on processors
+// transpose information on processors
 
 void softParticleCloud:: transposeScalarAmongProcs(scalarList toEveryone, scalarList fromEveryone)
 {
@@ -493,24 +493,25 @@ void softParticleCloud:: transposeScalarAmongProcs(scalarList toEveryone, scalar
     label nprocs = Pstream::nProcs();
     label myrank = Pstream::myProcNo();
 
-    if (toEvery.size() != nproc)
-      {
-            FatalErrorIn
+    if (toEveryone.size() != nprocs)
+    {
+        FatalErrorIn
 	    (
 	     "softParticleCloud::transScalarAmongProcs() "
 	    )   << "List size not equal to no. of procs \n "
-                << "Proc #: " << myrank << endl;
-      }
+            << "Proc #: " << myrank 
+            << abort(FatalError);
+    }
 
     PstreamBuffers pBufs(Pstream::nonBlocking);
 
     // send to everyone else with UOPstream (output)
-    for(int i = 0; i < nproc; i++)
+    for(int i = 0; i < nprocs; i++)
     {
         if (i != myrank)
         {
             UOPstream toEveryoneStream(i, pBufs);
-            toEveryoneStream << toEveryOne[i];
+            toEveryoneStream << toEveryone[i];
         }
     }
 
@@ -518,20 +519,19 @@ void softParticleCloud:: transposeScalarAmongProcs(scalarList toEveryone, scalar
     pBufs.finishedSends();
 
     // receive from everyone else; copy local data residing on my proc
-    for(int i = 0; i < nproc; i++)
+    for(int i = 0; i < nprocs; i++)
     {
         if (i != myrank)
         {
             UIPstream fromEveryoneStream(i, pBufs);
-            fromEveryone[i] = vector(fromEveryoneStream);
+            // fromEveryone[i] = scalar(fromEveryoneStream);
+            fromEveryoneStream >> fromEveryone[i];
         }
         else
         {
             fromEveryone[i] = toEveryone[i];
         }
     }
-
-    return 0;
 }
 
 // #define DEBUG_EVOLVE

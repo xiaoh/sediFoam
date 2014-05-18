@@ -227,6 +227,9 @@ protected:
         void setPositionCell();
 
 
+        //- Transpose the scalar of different processors
+        void transposeScalarAmongProcs(scalarList toEveryone, scalarList fromEveryone);
+
 public:
 
     // Constructors
