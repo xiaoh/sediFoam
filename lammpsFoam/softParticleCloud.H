@@ -228,7 +228,12 @@ protected:
 
 
         //- Transpose the scalar of different processors
-        void transposeScalarAmongProcs(scalarList toEveryone, scalarList fromEveryone);
+        template<class DataType>
+        void transposeAmongProcs
+        (
+            List<DataType>& toEveryone,
+            List<DataType>& fromEveryone
+        );
 
 public:
 

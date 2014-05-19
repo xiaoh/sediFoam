@@ -26,6 +26,7 @@ License
 
 #include "softParticleCloud.H"
 #include "processorPolyPatch.H"
+#include "vectorList.H"
 #include <string.h>
 #include "mpi.h"
 using std::string;
@@ -487,7 +488,12 @@ void softParticleCloud::setPositionCell()
 
 // transpose information on processors
 
-void softParticleCloud:: transposeScalarAmongProcs(scalarList toEveryone, scalarList fromEveryone)
+template<class DataType>
+void softParticleCloud:: transposeAmongProcs
+(
+    List<DataType>& toEveryone,
+    List<DataType>& fromEveryone
+)
 {
 
     label nprocs = Pstream::nProcs();
@@ -497,7 +503,7 @@ void softParticleCloud:: transposeScalarAmongProcs(scalarList toEveryone, scalar
     {
         FatalErrorIn
 	    (
-	     "softParticleCloud::transScalarAmongProcs() "
+	     "softParticleCloud::transAmongProcs() "
 	    )   << "List size not equal to no. of procs \n "
             << "Proc #: " << myrank 
             << abort(FatalError);
@@ -524,12 +530,15 @@ void softParticleCloud:: transposeScalarAmongProcs(scalarList toEveryone, scalar
         if (i != myrank)
         {
             UIPstream fromEveryoneStream(i, pBufs);
-            // fromEveryone[i] = scalar(fromEveryoneStream);
             fromEveryoneStream >> fromEveryone[i];
+            // DataType tmpData;
+            // fromEveryoneStream >> tmpData;
+            // fromEveryone[i].append(tmpData);
         }
         else
         {
             fromEveryone[i] = toEveryone[i];
+            // fromEveryone[i].append(toEveryone[i]);
         }
     }
 }
@@ -603,7 +612,138 @@ void  softParticleCloud::lammpsEvolveForward
         }
     }
 
-    lammps_put_drag(lmp_, fArray_); // Give current drag to Lammps
+    // lammps_put_drag(lmp_, fArray_); // Give current drag to Lammps
+
+    label nprocs = Pstream::nProcs();
+    label myrank = Pstream::myProcNo();
+    labelList lmpParticleNo(nprocs, 0);
+
+    // calculate the number of particles in each LmpCpu
+    i = 0;
+    for
+    (
+        softParticleCloud::iterator pIter = begin();
+        pIter != end();
+        ++pIter, ++i
+    )
+    {
+        softParticle& p = pIter();
+
+        label dragLmpCpuId = p.pLmpCpuId();
+        lmpParticleNo[dragLmpCpuId] ++;
+    }
+
+    // Pstream::listCombineGather(lmpParticleNo, plusEqOp<label>());
+    // Pstream::listCombineScatter(lmpParticleNo);
+
+    // Pout << "number of particles in each lmp cpu is: " << lmpParticleNo << endl;
+
+    // set drag/tag list
+    List<vectorList> dragListList(nprocs);
+    List<labelList> tagListList(nprocs);
+    labelList localParticleIndexList(nprocs);
+
+    forAll(tagListList, listI)
+    {
+        tagListList[listI].setSize(lmpParticleNo[listI]);
+        dragListList[listI].setSize(lmpParticleNo[listI]);
+        forAll(tagListList[listI],tagI)
+        {
+            tagListList[listI][tagI] = 0;
+            dragListList[listI][tagI] = vector::zero;
+        }
+
+        localParticleIndexList[listI] = 0;
+    }
+
+    i = 0;
+    for
+    (
+        softParticleCloud::iterator pIter = begin();
+        pIter != end();
+        ++pIter, ++i
+    )
+    {
+        softParticle& p = pIter();
+
+        label nLmpCpuId = p.pLmpCpuId();
+        label& nIndex = localParticleIndexList[nLmpCpuId];
+        dragListList[nLmpCpuId][nIndex] = FLocal[i];
+        tagListList[nLmpCpuId][nIndex] = p.ptag();
+        nIndex ++;
+    }
+
+    // Pout << "list of drag force is: " << dragListList << endl;
+    // Pout << "list of particle tag is: " << tagListList << endl;
+
+    List<vectorList> lmpDragListList(nprocs);
+    List<labelList> lmpTagListList(nprocs);
+
+    transposeAmongProcs<vectorList> (dragListList,lmpDragListList);
+    transposeAmongProcs<labelList> (tagListList,lmpTagListList);
+
+    // Pout << "list of drag force in lmp is: " << lmpDragListList << endl;
+    // Pout << "list of particle tag in lmp is: " << lmpTagListList << endl;
+
+    vectorList lmpDragList;
+    labelList lmpTagList;
+
+    label lengthLmpDragList = 0.0;
+    forAll(lmpDragListList,listI)
+    {
+        lengthLmpDragList += lmpDragListList[listI].size();
+    }
+
+    label lengthLmpTagList = 0.0;
+    forAll(lmpTagListList,listI)
+    {
+        lengthLmpTagList += lmpTagListList[listI].size();
+    }
+
+    if (lengthLmpTagList != lengthLmpDragList)
+    FatalErrorIn
+    (
+        "softParticleCloud::lammpsEvolveForward() "
+    )   << "length of drag list is unequal to length of tag list"
+        << abort(FatalError);
+
+    lmpDragList.setSize(lengthLmpDragList);
+    lmpTagList.setSize(lengthLmpTagList);
+
+    i = 0;
+    forAll(lmpDragListList,listI)
+    {
+        forAll(lmpDragListList[listI],dragI)
+        {
+            lmpDragList[i] = lmpDragListList[listI][dragI];
+            lmpTagList[i] = lmpTagListList[listI][dragI];
+            i++;
+        }
+    }
+
+    // Pout << "reduced list of drag force in lmp is: " << lmpDragList << endl;
+    // Pout << "reduced list of particle tag in lmp is: " << lmpTagList << endl;
+
+
+    double* fLocalArray_ = new double [3*lmpDragList.size()];
+    int* tagLocalArray_ = new int [lmpDragList.size()];
+
+    for(label i = 0; i < lmpDragList.size(); i++)
+    {
+        fLocalArray_[3*i + 0] = lmpDragList[i].x();
+        fLocalArray_[3*i + 1] = lmpDragList[i].y();
+        fLocalArray_[3*i + 2] = lmpDragList[i].z();
+        tagLocalArray_[i] = lmpTagList[i];
+    }
+
+    // Pout << "before we put drag again.." << endl;
+    lammps_put_drag_nproc(lmp_, lmpTagList.size(), fLocalArray_, tagLocalArray_);
+
+    delete [] fLocalArray_;
+    delete [] tagLocalArray_;
+
+    // Pout << "list of drag force is: " << dragList << endl;
+    // Pout << "list of particle tag is: " << tagList << endl;
 
     // Ask lammps to move certain steps forward
     lammps_step(lmp_, nstep);

@@ -39,6 +39,7 @@ extern "C" {
                        double* diam, double* rho_, int* tag_, int* lmpCpuId_, int* type_);
   /* set atom x&v for all procs */
   void lammps_put_drag(void* ptr, double* fdrag);
+  void lammps_put_drag_nproc(void* ptr, int nLocalIn, double* fdrag, int* tagIn);
   void lammps_step(void* ptr, int n);
   void lammps_set_timestep(void* ptr, double dt_i);
   double lammps_get_timestep(void* ptr);

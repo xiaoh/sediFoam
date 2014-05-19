@@ -236,7 +236,7 @@ void lammps_get_coord_velo(void* ptr, double* coords_, double* velos_,
 
 /* ---------------------------------------------------------------------- */
 
-void lammps_put_drag(void *ptr, int nLocalIn, double *fdrag, int *tagIn)
+void lammps_put_drag(void *ptr, double *fdrag)
 {
 
   LAMMPS *lammps = (LAMMPS *) ptr;
@@ -256,25 +256,58 @@ void lammps_put_drag(void *ptr, int nLocalIn, double *fdrag, int *tagIn)
     //initialize the pointer
     drag_ptr = (FixFluidDrag *) lammps->modify->fix[i];
 
-  if (nLocalIn != nlocal)
-    {
-      printf("Incoming drag not consisent with local particle number.");
-      // exit(1);
-    }
-
   int m, offset;
   for (int j = 0; j < nlocal; j++) {
-    // Naive matching algorithm
-    for(int k = 0; k < nlocal; k++)
-      { 
-	if (tagIn[k] == tag[j]) break;
-      }
-
-      offset = 3*(k - 1);
+      offset = 3*(tag[j] - 1);
 
       drag_ptr->ffluiddrag[j][0] = fdrag[offset+0];
       drag_ptr->ffluiddrag[j][1] = fdrag[offset+1];
       drag_ptr->ffluiddrag[j][2] = fdrag[offset+2];
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void lammps_put_drag_nproc(void* ptr, int nLocalIn, double* fdrag, int* tagIn)
+{
+
+  LAMMPS *lammps = (LAMMPS *) ptr;
+  int natoms = static_cast<int> (lammps->atom->natoms);
+
+  // the pointer to the fix_fluid_drag class
+  class FixFluidDrag *drag_ptr = NULL;
+
+  int i;
+  for (i = 0; i < (lammps->modify->nfix); i++)
+    if (strcmp(lammps->modify->fix[i]->style,"fdrag") == 0) break;
+
+  int *tag = lammps->atom->tag;
+  int nlocal = lammps->atom->nlocal;
+
+  if (i < lammps->modify->nfix)
+    //initialize the pointer
+    drag_ptr = (FixFluidDrag *) lammps->modify->fix[i];
+
+  // if (nLocalIn != nlocal)
+  //   {
+  //     printf("Incoming drag not consisent with local particle number.");
+  //     // exit(1);
+  //   }
+
+  int m, offset;
+  for (int j = 0; j < nlocal; j++) {
+
+    // Naive matching algorithm
+    int k;
+    for(k = 0; k < nlocal; k++) { 
+	    if (tagIn[k] == tag[j]) break;
+    }
+
+    offset = 3*k;
+
+    drag_ptr->ffluiddrag[j][0] = fdrag[offset+0];
+    drag_ptr->ffluiddrag[j][1] = fdrag[offset+1];
+    drag_ptr->ffluiddrag[j][2] = fdrag[offset+2];
   }
 }
 
