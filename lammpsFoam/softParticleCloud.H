@@ -148,6 +148,24 @@ class softParticleCloud
                 const double* array
             );
 
+            //- Convert a long list into list of lists
+            template <class DataType>
+            void assembleList
+            (
+                DataType& inList,
+                List<DataType>& outList,
+                labelList indexList,
+                labelList cpuList
+            );
+
+            //- Convert a list of lists to a longer list
+            template <class DataType>
+            void flattenList
+            (
+                List<DataType>& inList,
+                DataType& outList
+            );
+
             //- Construct OpenFOAM particles
             void initConstructParticles
             (
