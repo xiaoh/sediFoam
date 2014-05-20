@@ -549,7 +549,7 @@ void softParticleCloud::setPositionCell()
     }
 }
 
-//  Temp placement; 
+//  Temp placement;
 
 // transpose information on processors
 
@@ -570,7 +570,7 @@ void softParticleCloud:: transposeAmongProcs
 	    (
 	     "softParticleCloud::transAmongProcs() "
 	    )   << "List size not equal to no. of procs \n "
-            << "Proc #: " << myrank 
+            << "Proc #: " << myrank
             << abort(FatalError);
     }
 
@@ -624,11 +624,14 @@ void  softParticleCloud::lammpsEvolveForward
 )
 {
     label nprocs = Pstream::nProcs();
+    label myrank = Pstream::myProcNo();
     labelList lmpParticleNo(nprocs, 0);
 
     // calculate the number of particles in each LmpCpu
     vectorList foamDragList(size(), vector::zero);
     labelList foamTagList(size(), 0);
+    labelList foamCpuIdList(size(), 0);
+
     labelList lmpCpuIndexList(size(), 0);
 
     int i = 0;
@@ -646,6 +649,7 @@ void  softParticleCloud::lammpsEvolveForward
 
         label dragLmpCpuId = p.pLmpCpuId();
         lmpCpuIndexList[i] = dragLmpCpuId;
+        foamCpuIdList[i] = myrank;
         lmpParticleNo[dragLmpCpuId] ++;
     }
 
@@ -656,15 +660,19 @@ void  softParticleCloud::lammpsEvolveForward
 
     List<vectorList> dragListList(nprocs);
     List<labelList> tagListList(nprocs);
+    List<labelList> foamCpuIdListList(nprocs);
     assembleList<vectorList> (foamDragList, dragListList, lmpParticleNo, lmpCpuIndexList);
     assembleList<labelList> (foamTagList, tagListList, lmpParticleNo, lmpCpuIndexList);
+    assembleList<labelList> (foamCpuIdList, foamCpuIdListList, lmpParticleNo, lmpCpuIndexList);
 
     // transpose the lists in each OfCpu to LmpCpu
     List<vectorList> lmpDragListList(nprocs);
     List<labelList> lmpTagListList(nprocs);
+    List<labelList> lmpFoamCpuIdListList(nprocs);
 
     transposeAmongProcs<vectorList> (dragListList,lmpDragListList);
     transposeAmongProcs<labelList> (tagListList,lmpTagListList);
+    transposeAmongProcs<labelList> (foamCpuIdListList,lmpFoamCpuIdListList);
 
     // Pout << "list of drag force in lmp is: " << lmpDragListList << endl;
     // Pout << "list of particle tag in lmp is: " << lmpTagListList << endl;
@@ -672,13 +680,16 @@ void  softParticleCloud::lammpsEvolveForward
     // flatten the lists obtained for each LmpCpu
     vectorList lmpDragList;
     labelList lmpTagList;
+    labelList lmpFoamCpuIdList;
 
     flattenList<vectorList> (lmpDragListList, lmpDragList);
     flattenList<labelList> (lmpTagListList, lmpTagList);
+    flattenList<labelList> (lmpFoamCpuIdListList, lmpFoamCpuIdList);
 
     // transfer the data to the type that lammps can read
     double* fLocalArray_ = new double [3*lmpDragList.size()];
     int* tagLocalArray_ = new int [lmpDragList.size()];
+    int* foamCpuIdLocalArray_ = new int [lmpDragList.size()];
 
     for(label i = 0; i < lmpDragList.size(); i++)
     {
@@ -686,13 +697,15 @@ void  softParticleCloud::lammpsEvolveForward
         fLocalArray_[3*i + 1] = lmpDragList[i].y();
         fLocalArray_[3*i + 2] = lmpDragList[i].z();
         tagLocalArray_[i] = lmpTagList[i];
+        foamCpuIdLocalArray_[i] = lmpFoamCpuIdList[i];
     }
 
-    // Pout << "before we put drag again.." << endl;
     lammps_put_drag_nproc(lmp_, lmpTagList.size(), fLocalArray_, tagLocalArray_);
+    lammps_put_foamCpuId_nproc(lmp_, lmpTagList.size(), foamCpuIdLocalArray_, tagLocalArray_);
 
     delete [] fLocalArray_;
     delete [] tagLocalArray_;
+    delete [] foamCpuIdLocalArray_;
 
     // Ask lammps to move certain steps forward
     lammps_step(lmp_, nstep);
@@ -732,11 +745,128 @@ void  softParticleCloud::lammpsEvolveForward
     }
 
     // This a temperary work-around. Assemble array to vectors.
-    assembleVectors(XLocal, xArrayLocal);
-    assembleVectors(VLocal, vArrayLocal);
+    // assembleVectors(XLocal, xArrayLocal);
+    // assembleVectors(VLocal, vArrayLocal);
 
     delete [] xArrayLocal;
     delete [] vArrayLocal;
+
+    // Harvest the lammps particle number
+    int lmpNLocal = lammps_get_local_n(lmp_);
+
+    int* foamCpuIdArrayLocal = new int[lmpNLocal];
+    int* tagArrayLocal = new int[lmpNLocal];
+    double* xLmpLocal = new double [3*lmpNLocal];
+    double* vLmpLocal = new double [3*lmpNLocal];
+
+    lammps_get_local_info
+    (
+        lmp_,
+        xLmpLocal,
+        vLmpLocal,
+        foamCpuIdArrayLocal,
+        tagArrayLocal
+    );
+
+    vectorList xList(lmpNLocal);
+    vectorList vList(lmpNLocal);
+    labelList newFoamCpuIdList(lmpNLocal);
+    labelList newTagList(lmpNLocal);
+
+    labelList foamParticleNo(nprocs, 0);
+    labelList foamCpuIndexList(lmpNLocal, 0);
+
+    for(label i = 0; i < lmpNLocal; i++)
+    {
+        xList[i] =
+            vector
+            (
+                xLmpLocal[3*i + 0],
+                xLmpLocal[3*i + 1],
+                xLmpLocal[3*i + 2]
+            );
+
+        vList[i] =
+            vector
+            (
+                vLmpLocal[3*i + 0],
+                vLmpLocal[3*i + 1],
+                vLmpLocal[3*i + 2]
+            );
+
+        label foamCpuId = foamCpuIdArrayLocal[i];
+        foamCpuIndexList[i] = foamCpuId;
+        newFoamCpuIdList[i] = foamCpuIdArrayLocal[i];
+        newTagList[i] = tagArrayLocal[i];
+        foamParticleNo[foamCpuId] ++;
+    }
+
+    delete [] foamCpuIdArrayLocal;
+    delete [] tagArrayLocal;
+    delete [] xLmpLocal;
+    delete [] vLmpLocal;
+
+    List<vectorList> xListList(nprocs);
+    List<vectorList> vListList(nprocs);
+    List<labelList> newFoamCpuIdListList(nprocs);
+    List<labelList> newTagListList(nprocs);
+    assembleList<vectorList> (xList, xListList, foamParticleNo, foamCpuIndexList);
+    assembleList<vectorList> (vList, vListList, foamParticleNo, foamCpuIndexList);
+    assembleList<labelList> (newTagList, newTagListList, foamParticleNo, foamCpuIndexList);
+    assembleList<labelList> (newFoamCpuIdList, newFoamCpuIdListList, foamParticleNo, foamCpuIndexList);
+
+    // transpose the lists in each LmpCpu to OfCpu
+    List<vectorList> foamXListList(nprocs);
+    List<vectorList> foamVListList(nprocs);
+    List<labelList> foamNewFoamCpuIdListList(nprocs);
+    List<labelList> foamNewTagListList(nprocs);
+
+    transposeAmongProcs<vectorList> (xListList,foamXListList);
+    transposeAmongProcs<vectorList> (vListList,foamVListList);
+    transposeAmongProcs<labelList> (newTagListList,foamNewTagListList);
+    transposeAmongProcs<labelList> (newFoamCpuIdListList,foamNewFoamCpuIdListList);
+
+    vectorList foamXList;
+    vectorList foamVList;
+    labelList foamNewTagList;
+    labelList foamNewFoamCpuIdList;
+
+    flattenList<vectorList> (foamXListList, foamXList);
+    flattenList<vectorList> (foamVListList, foamVList);
+    flattenList<labelList> (foamNewTagListList, foamNewTagList);
+    flattenList<labelList> (foamNewFoamCpuIdListList, foamNewFoamCpuIdList);
+
+    double* xFoamArrayLocal = new double [3*foamXList.size()];
+    double* vFoamArrayLocal = new double [3*foamXList.size()];
+
+    for(label i = 0; i < foamXList.size(); i++)
+    {
+        label j = 0;
+        for(j = 0; j < foamXList.size(); j++)
+        {
+            if (foamTagList[i] == foamNewTagList[j])
+            {
+                // Pout<< "Find tag[" << i << "]: " << foamTagList[i]
+                //     << " in tagList[" << j << "]: " << foamNewTagList[j] << endl;
+                break;
+            }
+        }
+
+        xFoamArrayLocal[3*i + 0] = foamXList[j].x();
+        xFoamArrayLocal[3*i + 1] = foamXList[j].y();
+        xFoamArrayLocal[3*i + 2] = foamXList[j].z();
+
+        vFoamArrayLocal[3*i + 0] = foamVList[j].x();
+        vFoamArrayLocal[3*i + 1] = foamVList[j].y();
+        vFoamArrayLocal[3*i + 2] = foamVList[j].z();
+    }
+
+    // This a temperary work-around. Assemble array to vectors.
+    assembleVectors(XLocal, xFoamArrayLocal);
+    assembleVectors(VLocal, vFoamArrayLocal);
+
+    delete [] xFoamArrayLocal;
+    delete [] vFoamArrayLocal;
 
 } // Job done; Proceed to next fluid calculation step.
 

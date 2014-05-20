@@ -185,6 +185,72 @@ void lammps_get_initial_info(void* ptr, double* coords, double* velos, double* d
   delete [] copytype;
 }
 
+/* ---------------------------------------------------------------------- */
+// Provide particle number.
+int lammps_get_local_n(void* ptr)
+{
+  LAMMPS *lammps = (LAMMPS *) ptr;
+
+  int nlocal = lammps->atom->nlocal;
+
+  printf("++++=A> nlocal is: %5d\n", nlocal);
+
+  return nlocal;
+}
+
+
+/* ---------------------------------------------------------------------- */
+// Provide particle info (incl. coordinate, velocity etc.) to Foam
+// Note: No MPI communication occurs! Info is sent to the same processor.
+void lammps_get_local_info(void* ptr, double* coords_, double* velos_,
+			   int* foamCpuId_, int* tag_)
+{
+  int myrank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+
+  LAMMPS *lammps = (LAMMPS *) ptr;
+
+  // Coordinate, velocity etc. on Lammps *local* processor
+  double **x = lammps->atom->x;
+  double **v = lammps->atom->v;
+  int *tag = lammps->atom->tag;
+  int *type = lammps->atom->type;
+  int nlocal = lammps->atom->nlocal;
+
+
+  double *copyx = new double[3*nlocal];
+  double *copyv = new double[3*nlocal];
+  int *copyfoamCpuId = new int[nlocal];
+  int *copytag = new int[nlocal];
+
+  for (int i = 0; i < 3*nlocal; i++) {
+    copyx[i] = 0.0;
+    copyv[i] = 0.0;
+  }
+
+  for (int i = 0; i < nlocal; i++) {
+    copyfoamCpuId[i] = 0;
+    copytag[i] = 0;
+  }
+
+  for (int i = 0; i < nlocal; i++) {
+    coords_[3*i+0] = x[i][0];
+    coords_[3*i+1] = x[i][1];
+    coords_[3*i+2] = x[i][2];
+    velos_[3*i+0] = v[i][0];
+    velos_[3*i+1] = v[i][1];
+    velos_[3*i+2] = v[i][2];
+
+    foamCpuId_[i] = type[i] - 1;
+    tag_[i] = tag[i];
+  }
+
+  delete [] copyx;
+  delete [] copyv;
+  delete [] copyfoamCpuId;
+  delete [] copytag;
+}
+
 
 /* ---------------------------------------------------------------------- */
 // Provide particle info (incl. coordinate, velocity etc.) to Foam
@@ -245,7 +311,6 @@ void lammps_put_drag(void *ptr, double *fdrag)
 {
 
   LAMMPS *lammps = (LAMMPS *) ptr;
-  int natoms = static_cast<int> (lammps->atom->natoms);
 
   // the pointer to the fix_fluid_drag class
   class FixFluidDrag *drag_ptr = NULL;
@@ -261,7 +326,7 @@ void lammps_put_drag(void *ptr, double *fdrag)
     //initialize the pointer
     drag_ptr = (FixFluidDrag *) lammps->modify->fix[i];
 
-  int m, offset;
+  int offset;
   for (int j = 0; j < nlocal; j++) {
       offset = 3*(tag[j] - 1);
 
@@ -277,7 +342,6 @@ void lammps_put_drag_nproc(void* ptr, int nLocalIn, double* fdrag, int* tagIn)
 {
 
   LAMMPS *lammps = (LAMMPS *) ptr;
-  int natoms = static_cast<int> (lammps->atom->natoms);
 
   // the pointer to the fix_fluid_drag class
   class FixFluidDrag *drag_ptr = NULL;
@@ -293,16 +357,12 @@ void lammps_put_drag_nproc(void* ptr, int nLocalIn, double* fdrag, int* tagIn)
     //initialize the pointer
     drag_ptr = (FixFluidDrag *) lammps->modify->fix[i];
 
-  // if (nLocalIn != nlocal)
-  //   {
-  //     printf("Incoming drag not consisent with local particle number.");
-  //     // exit(1);
-  //   }
+  if (nLocalIn != nlocal)
+    {
+      printf("Incoming drag not consisent with local particle number.");
+    }
 
-  int myrank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
-
-  int m, offset;
+  int offset;
   for (int j = 0; j < nlocal; j++) {
 
     // Naive matching algorithm
@@ -316,6 +376,37 @@ void lammps_put_drag_nproc(void* ptr, int nLocalIn, double* fdrag, int* tagIn)
     drag_ptr->ffluiddrag[j][0] = fdrag[offset+0];
     drag_ptr->ffluiddrag[j][1] = fdrag[offset+1];
     drag_ptr->ffluiddrag[j][2] = fdrag[offset+2];
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void lammps_put_foamCpuId_nproc(void* ptr, int nLocalIn, int* foamCpuIdIn, int* tagIn)
+{
+
+  LAMMPS *lammps = (LAMMPS *) ptr;
+
+  int *tag = lammps->atom->tag;
+  int *type = lammps->atom->type;
+  int nlocal = lammps->atom->nlocal;
+
+  if (nLocalIn != nlocal)
+    {
+      printf("Incoming drag not consisent with local particle number.");
+    }
+
+  int offset;
+  for (int j = 0; j < nlocal; j++) {
+
+    // Naive matching algorithm
+    int k;
+    for(k = 0; k < nlocal; k++) { 
+	    if (tagIn[k] == tag[j]) break;
+    }
+
+    offset = k;
+    type[j] = foamCpuIdIn[offset] + 1;
+    printf("++++=A> type is: %5d\n", type[j]);
   }
 }
 
