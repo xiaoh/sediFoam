@@ -33,10 +33,10 @@ FixFluidDrag::FixFluidDrag(LAMMPS *lmp, int narg, char **arg) :
 {
   if (narg != 3) error->all(FLERR, "Illegal fix fdrag command");
 
-  int myrank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+  // int myrank;
+  // MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
 
-  printf("++++=A> fluid_drag created! %5d\n", myrank);
+  // printf("++++=A> fluid_drag created! %5d\n", myrank);
 
   ffluiddrag = NULL;
   grow_arrays(atom->nmax);

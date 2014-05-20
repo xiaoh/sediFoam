@@ -441,7 +441,12 @@ softParticleCloud::~softParticleCloud()
 
 // Change the positions and velocities of all the particles in this
 // cloud according to information provided by Lammps.
-void softParticleCloud::setPositionVelo(vector XLocal[], vector VLocal[])
+void softParticleCloud::setPositionVeloCpuId
+(
+    vector XLocal[],
+    vector VLocal[],
+    int lmpCpuIdLocal[]
+)
 {
     int i = 0;
     nLocal_ = 0;
@@ -460,6 +465,8 @@ void softParticleCloud::setPositionVelo(vector XLocal[], vector VLocal[])
 
         // Update velocity:
         p.U() = VLocal[i];
+
+        p.pLmpCpuId() = lmpCpuIdLocal[i];
         nLocal_++;
     }
     Pout<< " After movement, I have " << nLocal_
@@ -553,6 +560,7 @@ void  softParticleCloud::lammpsEvolveForward
 (
     vector* XLocal,
     vector* VLocal,
+    int* lmpCpuIdLocal,
     vectorList FLocal,
     int nstep
 )
@@ -615,7 +623,6 @@ void  softParticleCloud::lammpsEvolveForward
     // lammps_put_drag(lmp_, fArray_); // Give current drag to Lammps
 
     label nprocs = Pstream::nProcs();
-    label myrank = Pstream::myProcNo();
     labelList lmpParticleNo(nprocs, 0);
 
     // calculate the number of particles in each LmpCpu
@@ -742,9 +749,6 @@ void  softParticleCloud::lammpsEvolveForward
     delete [] fLocalArray_;
     delete [] tagLocalArray_;
 
-    // Pout << "list of drag force is: " << dragList << endl;
-    // Pout << "list of particle tag is: " << tagList << endl;
-
     // Ask lammps to move certain steps forward
     lammps_step(lmp_, nstep);
 
@@ -771,6 +775,8 @@ void  softParticleCloud::lammpsEvolveForward
         vArrayLocal[3*i] = vArray_[3*p.ptag() - 3];
         vArrayLocal[3*i + 1] = vArray_[3*p.ptag() - 2];
         vArrayLocal[3*i + 2] = vArray_[3*p.ptag() - 1];
+
+        lmpCpuIdLocal[i] = lmpCpuIdArray_[p.ptag()-1];
 
         if (debug)
         {

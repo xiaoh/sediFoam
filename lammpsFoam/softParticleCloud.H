@@ -210,16 +210,18 @@ protected:
         (
             vector* XLocal,
             vector* VLocal,
+            int* lmpCpuIdLocal,
             vectorList FLocal,
             int nstep
         );
 
         //- Set particle positions and velocities of the cloud
         //  using data from LAMMPS
-        void setPositionVelo
+        void setPositionVeloCpuId
         (
             vector* XLocal,
-            vector* VLocal
+            vector* VLocal,
+            int* lmpCpuIdLocal
         );
 
         //- Set the particle cell index after the particles

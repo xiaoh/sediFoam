@@ -458,6 +458,7 @@ void enhancedCloud::evolve()
         // sequence of local particle index.
         vector* XLocal = new vector[nLocal];
         vector* VLocal = new vector[nLocal];
+        int* lmpCpuIdLocal = new int[nLocal];
 
         int nstep = subSteps_;
 
@@ -468,11 +469,11 @@ void enhancedCloud::evolve()
 
         // XLocal & VLocal are work spaces for "lammpsEvolveForward"
         // newly obtianed values are put there
-        lammpsEvolveForward(XLocal, VLocal, pDrag_, nstep);
+        lammpsEvolveForward(XLocal, VLocal, lmpCpuIdLocal, pDrag_, nstep);
 
         // update position/velocity of all particles in this cloud.
         // (Harvest XLocal & VLocal)  Lammps --> Cloud
-        setPositionVelo(XLocal, VLocal);
+        setPositionVeloCpuId(XLocal, VLocal, lmpCpuIdLocal);
 
         diffusionRunTime_.cpuTimeIncrement();
         // move particle to the new position
@@ -502,6 +503,7 @@ void enhancedCloud::evolve()
 
         delete [] XLocal;
         delete [] VLocal;
+        delete [] lmpCpuIdLocal;
     }
 
     Pout<< "After this cycle, "

@@ -200,10 +200,14 @@ void lammps_get_coord_velo(void* ptr, double* coords_, double* velos_,
 
   double *copyx = new double[3*natoms];
   double *copyv = new double[3*natoms];
-  double *copyLmpCpuId = new double[natoms];
+  int *copylmpCpuId = new int[natoms];
   for (int i = 0; i < 3*natoms; i++) {
     copyx[i] = 0.0;
     copyv[i] = 0.0;
+  }
+
+  for (int i = 0; i < natoms; i++) {
+    copylmpCpuId[i] = 0;
   }
 
   // Coordinate, velocity etc. on Lammps *local* processor
@@ -223,15 +227,16 @@ void lammps_get_coord_velo(void* ptr, double* coords_, double* velos_,
     copyv[offset+1] = v[i][1];
     copyv[offset+2] = v[i][2];
 
-    lmpCpuId_[id-1] = myrank;
+    copylmpCpuId[id-1] = myrank;
   }
 
   MPI_Allreduce(copyx,coords_,3*natoms,MPI_DOUBLE,MPI_SUM,lammps->world);
   MPI_Allreduce(copyv,velos_,3*natoms,MPI_DOUBLE,MPI_SUM,lammps->world);
-  MPI_Allreduce(copyLmpCpuId,lmpCpuId_,natoms,MPI_DOUBLE,MPI_SUM,lammps->world);
+  MPI_Allreduce(copylmpCpuId,lmpCpuId_,natoms,MPI_INT,MPI_SUM,lammps->world);
+
   delete [] copyx;
   delete [] copyv;
-  delete [] copyLmpCpuId;
+  delete [] copylmpCpuId;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -293,6 +298,9 @@ void lammps_put_drag_nproc(void* ptr, int nLocalIn, double* fdrag, int* tagIn)
   //     printf("Incoming drag not consisent with local particle number.");
   //     // exit(1);
   //   }
+
+  int myrank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
 
   int m, offset;
   for (int j = 0; j < nlocal; j++) {
