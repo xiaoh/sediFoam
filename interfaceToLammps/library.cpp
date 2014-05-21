@@ -205,10 +205,23 @@ int lammps_get_local_n(void* ptr)
 void lammps_get_local_info(void* ptr, double* coords_, double* velos_,
 			   int* foamCpuId_, int* lmpCpuId_, int* tag_)
 {
+
   int myrank;
   MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
 
   LAMMPS *lammps = (LAMMPS *) ptr;
+
+  // the pointer to the fix_fluid_drag class
+  class FixFluidDrag *drag_ptr = NULL;
+
+  int i;
+  for (i = 0; i < (lammps->modify->nfix); i++)
+    if (strcmp(lammps->modify->fix[i]->style,"fdrag") == 0) break;
+
+  if (i < lammps->modify->nfix)
+    //initialize the pointer
+    drag_ptr = (FixFluidDrag *) lammps->modify->fix[i];
+
 
   // Coordinate, velocity etc. on Lammps *local* processor
   double **x = lammps->atom->x;
@@ -241,7 +254,8 @@ void lammps_get_local_info(void* ptr, double* coords_, double* velos_,
     velos_[3*i+1] = v[i][1];
     velos_[3*i+2] = v[i][2];
 
-    foamCpuId_[i] = type[i] - 1;
+    foamCpuId_[i] = drag_ptr->foamCpuId[i];
+
     lmpCpuId_[i] = myrank;
     tag_[i] = tag[i];
   }
@@ -255,59 +269,7 @@ void lammps_get_local_info(void* ptr, double* coords_, double* velos_,
 
 /* ---------------------------------------------------------------------- */
 // Provide particle info (incl. coordinate, velocity etc.) to Foam
-// Note: No MPI communication occurs! Info is sent to the same processor.
-void lammps_get_coord_velo(void* ptr, double* coords_, double* velos_,
-			   int* lmpCpuId_)
-{
-  int myrank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
-
-  LAMMPS *lammps = (LAMMPS *) ptr;
-  int natoms = static_cast<int> (lammps->atom->natoms);
-
-  double *copyx = new double[3*natoms];
-  double *copyv = new double[3*natoms];
-  int *copylmpCpuId = new int[natoms];
-  for (int i = 0; i < 3*natoms; i++) {
-    copyx[i] = 0.0;
-    copyv[i] = 0.0;
-  }
-
-  for (int i = 0; i < natoms; i++) {
-    copylmpCpuId[i] = 0;
-  }
-
-  // Coordinate, velocity etc. on Lammps *local* processor
-  double **x = lammps->atom->x;
-  double **v = lammps->atom->v;
-  int *tag = lammps->atom->tag;
-  int nlocal = lammps->atom->nlocal;
-
-  int id,offset;
-  for (int i = 0; i < nlocal; i++) {
-    id = tag[i];
-    offset = 3*(id-1);
-    copyx[offset+0] = x[i][0];
-    copyx[offset+1] = x[i][1];
-    copyx[offset+2] = x[i][2];
-    copyv[offset+0] = v[i][0];
-    copyv[offset+1] = v[i][1];
-    copyv[offset+2] = v[i][2];
-
-    copylmpCpuId[id-1] = myrank;
-  }
-
-  MPI_Allreduce(copyx,coords_,3*natoms,MPI_DOUBLE,MPI_SUM,lammps->world);
-  MPI_Allreduce(copyv,velos_,3*natoms,MPI_DOUBLE,MPI_SUM,lammps->world);
-  MPI_Allreduce(copylmpCpuId,lmpCpuId_,natoms,MPI_INT,MPI_SUM,lammps->world);
-
-  delete [] copyx;
-  delete [] copyv;
-  delete [] copylmpCpuId;
-}
-
-/* ---------------------------------------------------------------------- */
-
+// Note: MPI communication occurs!
 void lammps_put_local_info(void* ptr, int nLocalIn, double* fdrag, int* foamCpuIdIn, int* tagIn)
 {
 
@@ -342,7 +304,7 @@ void lammps_put_local_info(void* ptr, int nLocalIn, double* fdrag, int* foamCpuI
 	    if (tagIn[k] == tag[j]) break;
     }
 
-    type[j] = foamCpuIdIn[k] + 1;
+    drag_ptr->foamCpuId[j] = foamCpuIdIn[k];
 
     offset = 3*k;
 

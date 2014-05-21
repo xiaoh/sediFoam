@@ -32,10 +32,6 @@ extern "C" {
   void lammps_sync(void* ptr);
   int lammps_get_global_n(void *);              /* return # of atoms */
 
-  /* get atom x&v for all procs */
-  void lammps_get_coord_velo(void* ptr, double* coords,
-                                      double* velos_, int* lmpCpuId_);
-
   /* get atom x&v&d & rho & type */
   void lammps_get_initial_info(void* ptr, double* coords, double* velos,
                                double* diam, double* rho_, int* tag_,

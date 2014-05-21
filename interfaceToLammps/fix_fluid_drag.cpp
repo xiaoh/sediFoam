@@ -39,6 +39,7 @@ FixFluidDrag::FixFluidDrag(LAMMPS *lmp, int narg, char **arg) :
   // printf("++++=A> fluid_drag created! %5d\n", myrank);
 
   ffluiddrag = NULL;
+  foamCpuId = NULL;
   grow_arrays(atom->nmax);
   atom->add_callback(0);
 }
@@ -50,6 +51,7 @@ FixFluidDrag::FixFluidDrag(LAMMPS *lmp, int narg, char **arg) :
   // unregister callbacks to this fix from Atom class
   atom->delete_callback(id,0);
 
+  delete [] foamCpuId;
   memory->destroy(ffluiddrag);
 }
 
@@ -73,6 +75,8 @@ void FixFluidDrag::init()
       ffluiddrag[i][0] = 0.;
       ffluiddrag[i][1] = 0.;
       ffluiddrag[i][2] = 0.;
+
+      foamCpuId[i] = 0;
     }
   }
 }
@@ -115,6 +119,7 @@ void FixFluidDrag::post_force(int vflag)
 double FixFluidDrag::memory_usage()
 {
   double bytes = 3*atom->nmax * sizeof(double);
+  bytes += atom->nmax * sizeof(int);
   return bytes;
 }
 
@@ -125,6 +130,7 @@ double FixFluidDrag::memory_usage()
 void FixFluidDrag::grow_arrays(int nmax)
 {
   memory->grow(ffluiddrag,nmax,3,"fluid_drag:ffluiddrag");
+  memory->grow(foamCpuId,nmax,"fluid_drag:foamCpuId");
 }
 
 /* ----------------------------------------------------------------------
@@ -136,6 +142,7 @@ void FixFluidDrag::copy_arrays(int i, int j, int delflag)
   ffluiddrag[j][0] = ffluiddrag[i][0];
   ffluiddrag[j][1] = ffluiddrag[i][1];
   ffluiddrag[j][2] = ffluiddrag[i][2];
+  foamCpuId[j] = foamCpuId[i];
 }
 
 /* ----------------------------------------------------------------------
@@ -147,7 +154,8 @@ int FixFluidDrag::pack_exchange(int i, double *buf)
   buf[0] = ffluiddrag[i][0];
   buf[1] = ffluiddrag[i][1];
   buf[2] = ffluiddrag[i][2];
-  return 3;
+  buf[3] = foamCpuId[i];
+  return 4;
 }
 
 /* ----------------------------------------------------------------------
@@ -159,5 +167,6 @@ int FixFluidDrag::unpack_exchange(int nlocal, double *buf)
   ffluiddrag[nlocal][0] = buf[0];
   ffluiddrag[nlocal][1] = buf[1];
   ffluiddrag[nlocal][2] = buf[2];
-  return 3;
+  foamCpuId[nlocal] = buf[3];
+  return 4;
 }
