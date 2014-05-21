@@ -86,7 +86,7 @@ void lammps_sync(void *ptr)
 
 /* ---------------------------------------------------------------------- */
 
-int lammps_get_natoms(void *ptr)
+int lammps_get_global_n(void *ptr)
 {
   LAMMPS *lammps = (LAMMPS *) ptr;
   int natoms = static_cast<int> (lammps->atom->natoms);
@@ -203,7 +203,7 @@ int lammps_get_local_n(void* ptr)
 // Provide particle info (incl. coordinate, velocity etc.) to Foam
 // Note: No MPI communication occurs! Info is sent to the same processor.
 void lammps_get_local_info(void* ptr, double* coords_, double* velos_,
-			   int* foamCpuId_, int* tag_)
+			   int* foamCpuId_, int* lmpCpuId_, int* tag_)
 {
   int myrank;
   MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
@@ -242,6 +242,7 @@ void lammps_get_local_info(void* ptr, double* coords_, double* velos_,
     velos_[3*i+2] = v[i][2];
 
     foamCpuId_[i] = type[i] - 1;
+    lmpCpuId_[i] = myrank;
     tag_[i] = tag[i];
   }
 
@@ -307,7 +308,7 @@ void lammps_get_coord_velo(void* ptr, double* coords_, double* velos_,
 
 /* ---------------------------------------------------------------------- */
 
-void lammps_put_drag(void *ptr, double *fdrag)
+void lammps_put_local_info(void* ptr, int nLocalIn, double* fdrag, int* foamCpuIdIn, int* tagIn)
 {
 
   LAMMPS *lammps = (LAMMPS *) ptr;
@@ -320,37 +321,7 @@ void lammps_put_drag(void *ptr, double *fdrag)
     if (strcmp(lammps->modify->fix[i]->style,"fdrag") == 0) break;
 
   int *tag = lammps->atom->tag;
-  int nlocal = lammps->atom->nlocal;
-
-  if (i < lammps->modify->nfix)
-    //initialize the pointer
-    drag_ptr = (FixFluidDrag *) lammps->modify->fix[i];
-
-  int offset;
-  for (int j = 0; j < nlocal; j++) {
-      offset = 3*(tag[j] - 1);
-
-      drag_ptr->ffluiddrag[j][0] = fdrag[offset+0];
-      drag_ptr->ffluiddrag[j][1] = fdrag[offset+1];
-      drag_ptr->ffluiddrag[j][2] = fdrag[offset+2];
-  }
-}
-
-/* ---------------------------------------------------------------------- */
-
-void lammps_put_drag_nproc(void* ptr, int nLocalIn, double* fdrag, int* tagIn)
-{
-
-  LAMMPS *lammps = (LAMMPS *) ptr;
-
-  // the pointer to the fix_fluid_drag class
-  class FixFluidDrag *drag_ptr = NULL;
-
-  int i;
-  for (i = 0; i < (lammps->modify->nfix); i++)
-    if (strcmp(lammps->modify->fix[i]->style,"fdrag") == 0) break;
-
-  int *tag = lammps->atom->tag;
+  int *type = lammps->atom->type;
   int nlocal = lammps->atom->nlocal;
 
   if (i < lammps->modify->nfix)
@@ -370,43 +341,14 @@ void lammps_put_drag_nproc(void* ptr, int nLocalIn, double* fdrag, int* tagIn)
     for(k = 0; k < nlocal; k++) { 
 	    if (tagIn[k] == tag[j]) break;
     }
+
+    type[j] = foamCpuIdIn[k] + 1;
 
     offset = 3*k;
 
     drag_ptr->ffluiddrag[j][0] = fdrag[offset+0];
     drag_ptr->ffluiddrag[j][1] = fdrag[offset+1];
     drag_ptr->ffluiddrag[j][2] = fdrag[offset+2];
-  }
-}
-
-/* ---------------------------------------------------------------------- */
-
-void lammps_put_foamCpuId_nproc(void* ptr, int nLocalIn, int* foamCpuIdIn, int* tagIn)
-{
-
-  LAMMPS *lammps = (LAMMPS *) ptr;
-
-  int *tag = lammps->atom->tag;
-  int *type = lammps->atom->type;
-  int nlocal = lammps->atom->nlocal;
-
-  if (nLocalIn != nlocal)
-    {
-      printf("Incoming drag not consisent with local particle number.");
-    }
-
-  int offset;
-  for (int j = 0; j < nlocal; j++) {
-
-    // Naive matching algorithm
-    int k;
-    for(k = 0; k < nlocal; k++) { 
-	    if (tagIn[k] == tag[j]) break;
-    }
-
-    offset = k;
-    type[j] = foamCpuIdIn[offset] + 1;
-    printf("++++=A> type is: %5d\n", type[j]);
   }
 }
 

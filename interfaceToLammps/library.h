@@ -30,22 +30,28 @@ extern "C" {
   char *lammps_command(void *, char *);             /* execute a command */
 
   void lammps_sync(void* ptr);
-  int lammps_get_natoms(void *);              /* return # of atoms */
+  int lammps_get_global_n(void *);              /* return # of atoms */
 
   /* get atom x&v for all procs */
   void lammps_get_coord_velo(void* ptr, double* coords,
                                       double* velos_, int* lmpCpuId_);
+
   /* get atom x&v&d & rho & type */
   void lammps_get_initial_info(void* ptr, double* coords, double* velos,
                                double* diam, double* rho_, int* tag_,
                                int* lmpCpuId_, int* type_);
+
+  /* get atom number in each lmp cpu */
   int lammps_get_local_n(void* ptr);
-  void lammps_get_local_info(void* ptr, double* coords,
-                             double* velos_, int* lmpCpuId_, int* tag_);
-  /* set atom x&v for all procs */
-  void lammps_put_drag(void* ptr, double* fdrag);
-  void lammps_put_drag_nproc(void* ptr, int nLocalIn, double* fdrag, int* tagIn);
-  void lammps_put_foamCpuId_nproc(void* ptr, int nLocalIn, int* foamCpuIdIn, int* tagIn);
+
+  /* get atom x&v&foamCpuId&lmpCpuId */
+  void lammps_get_local_info(void* ptr, double* coords, double* velos_,
+                             int* foamCpuId_, int* lmpCpuId_, int* tag_);
+
+  /* set atom x&v&foamCpuId for all procs */
+  void lammps_put_local_info(void* ptr, int nLocalIn, double* fdrag, 
+                             int* foamCpuIdIn, int* tagIn);
+
   void lammps_step(void* ptr, int n);
   void lammps_set_timestep(void* ptr, double dt_i);
   double lammps_get_timestep(void* ptr);
