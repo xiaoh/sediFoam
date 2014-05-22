@@ -508,8 +508,6 @@ void enhancedCloud::evolve()
 
     Pout<< "After this cycle, "
         << size() << " local particles has been moved. " << endl;
-    Info<< "Diffusion/particle movint Time is: " << diffusionTimeCount_ 
-        << "/" << particleMoveTime_ << "." << endl;
 }
 
 

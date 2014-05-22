@@ -325,71 +325,6 @@ void softParticleCloud::finishLammps()
 
 // The two function will be eliminated in the future for efficiency
 // reasons. This is a work around.
-
-// This is not necessary as vector in OF is contiguous!
-// Will remove later.
-void softParticleCloud::flattenVectors
-(
-    const vector* vec,
-    double* array
-)
-{
-    for(label i = 0; i < nGlobal_; i++)
-    {
-        array[3*i + 0] = vec[i].x();
-        array[3*i + 1] = vec[i].y();
-        array[3*i + 2] = vec[i].z();
-    }
-}
-
-void softParticleCloud::flattenVectors
-(
-    const vectorList vec,
-    double* array
-)
-{
-    for(label i = 0; i < nGlobal_; i++)
-    {
-        array[3*i + 0] = vec[i].x();
-        array[3*i + 1] = vec[i].y();
-        array[3*i + 2] = vec[i].z();
-
-        if (debug)
-        {
-            Pout<< "array [" << 3*i + 0 << "] is: "
-                << array[3*i + 0] << endl;
-            Pout<< "array [" << 3*i + 1 << "] is: "
-                << array[3*i + 1] << endl;
-            Pout<< "array [" << 3*i + 2 << "] is: "
-                << array[3*i + 2] << endl;
-        }
-    }
-}
-
-
-// Reverse operation of flattenVectors;
-void softParticleCloud::assembleVectors
-(
-    vector* vec,
-    const double* array
-)
-{
-    for(label i = 0; i < size(); i++)
-    {
-        vec[i] = vector
-        (
-            array[3*i + 0],
-            array[3*i + 1],
-            array[3*i + 2]
-        );
-        if (debug)
-        {
-            Pout<< "vec [" << i << "] is: " << vec[i] << endl;
-        }
-    }
-}
-
-
 template <class DataType>
 void softParticleCloud::assembleList
 (
@@ -424,14 +359,6 @@ void softParticleCloud::flattenList
     DataType& outList
 )
 {
-    label listLength = 0.0;
-    forAll(inList,listI)
-    {
-        listLength += inList[listI].size();
-    }
-
-    outList.setSize(listLength);
-
     int i = 0;
     forAll(inList,listI)
     {
@@ -648,7 +575,7 @@ void  softParticleCloud::lammpsEvolveForward
     }
 
     // Set drag/tag list of particle in each LmpCpu
-    // assemble them into lists of drag/tag/foamCpuId 
+    // assemble them into lists of drag/tag/foamCpuId
     // by the index of the processor
     List<vectorList> fromFoamDragListList(nprocs);
     List<labelList> fromFoamFoamCpuIdListList(nprocs);
@@ -690,28 +617,47 @@ void  softParticleCloud::lammpsEvolveForward
     );
     transposeAmongProcs<labelList> (fromFoamTagListList, toLmpTagListList);
 
+    label toLmpListSize = 0;
+    forAll(toLmpTagListList, listI)
+    {
+        toLmpListSize += toLmpTagListList[listI].size();
+    }
     // flatten the lists obtained for each LmpCpu
-    vectorList toLmpDragList;
-    labelList toLmpFoamCpuIdList;
-    labelList toLmpTagList;
+    vectorList toLmpDragList(toLmpListSize, vector::zero);
+    labelList toLmpFoamCpuIdList(toLmpListSize, 0);
+    labelList toLmpTagList(toLmpListSize, 0);
 
     flattenList<vectorList> (toLmpDragListList, toLmpDragList);
     flattenList<labelList> (toLmpFoamCpuIdListList, toLmpFoamCpuIdList);
     flattenList<labelList> (toLmpTagListList, toLmpTagList);
 
-    // transfer the data to the type that lammps can read
-    int toLmpListSize = toLmpDragList.size();
     double* toLmpFLocalArray_ = new double [3*toLmpListSize];
     int* toLmpFoamCpuIdLocalArray_ = new int [toLmpListSize];
     int* toLmpTagLocalArray_ = new int [toLmpListSize];
 
-    for(label i = 0; i < toLmpListSize; i++)
+    if (contiguous<vector>())
     {
-        toLmpFLocalArray_[3*i + 0] = toLmpDragList[i].x();
-        toLmpFLocalArray_[3*i + 1] = toLmpDragList[i].y();
-        toLmpFLocalArray_[3*i + 2] = toLmpDragList[i].z();
-        toLmpFoamCpuIdLocalArray_[i] = toLmpFoamCpuIdList[i];
-        toLmpTagLocalArray_[i] = toLmpTagList[i];
+        Pout<< "contiguous vector is true." << endl;
+        toLmpFLocalArray_ = 
+            reinterpret_cast <double *> (&(toLmpDragList.first()));
+
+        toLmpFoamCpuIdLocalArray_ = 
+            reinterpret_cast <int *> (&(toLmpFoamCpuIdList.first()));
+
+        toLmpTagLocalArray_ = 
+            reinterpret_cast <int *> (&(toLmpTagList.first()));
+    }
+    else
+    {
+        Pout<< "contiguous vector is false." << endl;
+        for(label i = 0; i < toLmpListSize; i++)
+        {
+            toLmpFLocalArray_[3*i + 0] = toLmpDragList[i].x();
+            toLmpFLocalArray_[3*i + 1] = toLmpDragList[i].y();
+            toLmpFLocalArray_[3*i + 2] = toLmpDragList[i].z();
+            toLmpFoamCpuIdLocalArray_[i] = toLmpFoamCpuIdList[i];
+            toLmpTagLocalArray_[i] = toLmpTagList[i];
+        }
     }
 
     lammps_put_local_info
@@ -723,9 +669,9 @@ void  softParticleCloud::lammpsEvolveForward
         toLmpTagLocalArray_
     );
 
-    delete [] toLmpFLocalArray_;
-    delete [] toLmpFoamCpuIdLocalArray_;
-    delete [] toLmpTagLocalArray_;
+    // delete [] toLmpFLocalArray_;
+    // delete [] toLmpFoamCpuIdLocalArray_;
+    // delete [] toLmpTagLocalArray_;
 
     // Ask lammps to move certain steps forward
     lammps_step(lmp_, nstep);
@@ -790,7 +736,7 @@ void  softParticleCloud::lammpsEvolveForward
     delete [] fromLmpLmpCpuIdArrayLocal;
     delete [] fromLmpTagArrayLocal;
 
-    // Separate the information from LAMMPS into  lists of 
+    // Separate the information from LAMMPS into  lists of
     // different processors
     List<vectorList> fromLmpXListList(nprocs);
     List<vectorList> fromLmpVListList(nprocs);
@@ -860,11 +806,11 @@ void  softParticleCloud::lammpsEvolveForward
 
     // Collect all the information transfered from other processors in lists
     // and combine them into one list
-    vectorList toFoamXList;
-    vectorList toFoamVList;
-    labelList toFoamFoamCpuIdList;
-    labelList toFoamLmpCpuIdList;
-    labelList toFoamTagList;
+    vectorList toFoamXList(size(), vector::zero);
+    vectorList toFoamVList(size(), vector::zero);
+    labelList toFoamFoamCpuIdList(size(), 0);
+    labelList toFoamLmpCpuIdList(size(), 0);
+    labelList toFoamTagList(size(), 0);
 
     flattenList<vectorList> (toFoamXListList, toFoamXList);
     flattenList<vectorList> (toFoamVListList, toFoamVList);
@@ -873,39 +819,37 @@ void  softParticleCloud::lammpsEvolveForward
     flattenList<labelList> (toFoamTagListList, toFoamTagList);
 
     // Assign the position & velocity & lmpCpuId to the particle in OpenFOAM
-    int toListSize = toFoamXList.size();
+    labelList sortedFromFoamTag(size(),0);
+    labelList sortedToFoamTag(size(),0);
 
-    for(label i = 0; i < toListSize; i++)
+    sortedOrder(fromFoamTagList, sortedFromFoamTag);
+    sortedOrder(toFoamTagList, sortedToFoamTag);
+
+    for(label i = 0; i < size(); i++)
     {
-        label j = 0;
-        for(j = 0; j < toListSize; j++)
-        {
-            if (fromFoamTagList[i] == toFoamTagList[j])
-            {
-                break;
-            }
-        }
+        label fromI = sortedFromFoamTag[i];
+        label toI = sortedToFoamTag[i];
 
         // position
-        XLocal[i] = 
+        XLocal[fromI] =
             vector
             (
-                toFoamXList[j].x(),
-                toFoamXList[j].y(),
-                toFoamXList[j].z()
+                toFoamXList[toI].x(),
+                toFoamXList[toI].y(),
+                toFoamXList[toI].z()
             );
 
         // velocity
-        VLocal[i] = 
+        VLocal[fromI] =
             vector
             (
-                toFoamVList[j].x(),
-                toFoamVList[j].y(),
-                toFoamVList[j].z()
+                toFoamVList[toI].x(),
+                toFoamVList[toI].y(),
+                toFoamVList[toI].z()
             );
-        
+
         // lmpCpuId
-        lmpCpuIdLocal[i] = toFoamLmpCpuIdList[j];
+        lmpCpuIdLocal[fromI] = toFoamLmpCpuIdList[toI];
     }
 
 } // Job done; Proceed to next fluid calculation step.

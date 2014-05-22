@@ -203,7 +203,7 @@ int lammps_get_local_n(void* ptr)
 // Provide particle info (incl. coordinate, velocity etc.) to Foam
 // Note: No MPI communication occurs! Info is sent to the same processor.
 void lammps_get_local_info(void* ptr, double* coords_, double* velos_,
-			   int* foamCpuId_, int* lmpCpuId_, int* tag_)
+                           int* foamCpuId_, int* lmpCpuId_, int* tag_)
 {
 
   int myrank;
@@ -270,7 +270,8 @@ void lammps_get_local_info(void* ptr, double* coords_, double* velos_,
 /* ---------------------------------------------------------------------- */
 // Provide particle info (incl. coordinate, velocity etc.) to Foam
 // Note: MPI communication occurs!
-void lammps_put_local_info(void* ptr, int nLocalIn, double* fdrag, int* foamCpuIdIn, int* tagIn)
+void lammps_put_local_info(void* ptr, int nLocalIn, double* fdrag, 
+                           int* foamCpuIdIn, int* tagIn)
 {
 
   LAMMPS *lammps = (LAMMPS *) ptr;
@@ -295,22 +296,29 @@ void lammps_put_local_info(void* ptr, int nLocalIn, double* fdrag, int* foamCpuI
       printf("Incoming drag not consisent with local particle number.");
     }
 
-  int offset;
+  //initialize the tag pair to sort
+  std::vector<tagpair> lmptagpair (nlocal);
+  std::vector<tagpair> intagpair (nlocal);
+  for (int i = 0; i < nlocal; i++) {
+      lmptagpair[i].tag = tag[i];
+      lmptagpair[i].index = i;
+      intagpair[i].tag = tagIn[i];
+      intagpair[i].index = i;
+  }
+
+  std::sort(lmptagpair.begin(), lmptagpair.end(), by_number());
+  std::sort(intagpair.begin(), intagpair.end(), by_number());
+
   for (int j = 0; j < nlocal; j++) {
 
-    // Naive matching algorithm
-    int k;
-    for(k = 0; k < nlocal; k++) { 
-	    if (tagIn[k] == tag[j]) break;
-    }
+    int fromfoamid = intagpair[j].index;
+    int tolmpid = lmptagpair[j].index;
 
-    drag_ptr->foamCpuId[j] = foamCpuIdIn[k];
+    drag_ptr->foamCpuId[tolmpid] = foamCpuIdIn[fromfoamid];
 
-    offset = 3*k;
-
-    drag_ptr->ffluiddrag[j][0] = fdrag[offset+0];
-    drag_ptr->ffluiddrag[j][1] = fdrag[offset+1];
-    drag_ptr->ffluiddrag[j][2] = fdrag[offset+2];
+    drag_ptr->ffluiddrag[tolmpid][0] = fdrag[3*fromfoamid+0];
+    drag_ptr->ffluiddrag[tolmpid][1] = fdrag[3*fromfoamid+1];
+    drag_ptr->ffluiddrag[tolmpid][2] = fdrag[3*fromfoamid+2];
   }
 }
 
@@ -348,3 +356,4 @@ void lammps_set_timestep(void *ptr, double dt_i)
   LAMMPS *lammps = (LAMMPS *) ptr;
   lammps->update->dt = dt_i;
 }
+

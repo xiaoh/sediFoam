@@ -18,6 +18,8 @@
 
 #include "mpi.h"
 #include "stdio.h"
+#include <vector>
+#include <algorithm>
 /* ifdef allow this file to be included in a C program */
 
 #ifdef __cplusplus
@@ -51,6 +53,18 @@ extern "C" {
   void lammps_step(void* ptr, int n);
   void lammps_set_timestep(void* ptr, double dt_i);
   double lammps_get_timestep(void* ptr);
+
+  /* used in the sorting part when assigning data from OpenFOAM*/
+  struct tagpair {
+    int tag;
+    int index;
+  };
+
+  struct by_number {
+    bool operator() (tagpair const &left, tagpair const &right) {
+      return left.tag < right.tag;
+    }
+  };
 #ifdef __cplusplus
 }
 #endif

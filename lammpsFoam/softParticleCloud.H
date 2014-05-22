@@ -127,27 +127,6 @@ class softParticleCloud
             //- Destructor of LAMMPS
             void finishLammps();
 
-            //- Convert a vector list to a scalar list
-            void flattenVectors
-            (
-                const vector* vec,
-                double* array
-            );
-
-            //- Convert a vector list to a scalar list
-            void flattenVectors
-            (
-                const vectorList vec,
-                double* array
-            );
-
-            //- Convert a scalar list to a vector list
-            void assembleVectors
-            (
-                vector* vec,
-                const double* array
-            );
-
             //- Convert a long list into list of lists
             template <class DataType>
             void assembleList
