@@ -639,24 +639,33 @@ void  softParticleCloud::lammpsEvolveForward
     flattenList<labelList> (toLmpFoamCpuIdListList, toLmpFoamCpuIdList);
     flattenList<labelList> (toLmpTagListList, toLmpTagList);
 
-    double* toLmpFLocalArray_ = new double [3*toLmpListSize];
-    int* toLmpFoamCpuIdLocalArray_ = new int [toLmpListSize];
-    int* toLmpTagLocalArray_ = new int [toLmpListSize];
-
     if (contiguous<vector>())
     {
         Pout<< "contiguous vector is true." << endl;
-        toLmpFLocalArray_ = 
+        double* toLmpFLocalArray_ = 
             reinterpret_cast <double *> (&(toLmpDragList.first()));
 
-        toLmpFoamCpuIdLocalArray_ = 
+        int* toLmpFoamCpuIdLocalArray_ = 
             reinterpret_cast <int *> (&(toLmpFoamCpuIdList.first()));
 
-        toLmpTagLocalArray_ = 
+        int* toLmpTagLocalArray_ = 
             reinterpret_cast <int *> (&(toLmpTagList.first()));
+
+        lammps_put_local_info
+        (
+            lmp_,
+            toLmpListSize,
+            toLmpFLocalArray_,
+            toLmpFoamCpuIdLocalArray_,
+            toLmpTagLocalArray_
+        );
     }
     else
     {
+        double* toLmpFLocalArray_ = new double [3*toLmpListSize];
+        int* toLmpFoamCpuIdLocalArray_ = new int [toLmpListSize];
+        int* toLmpTagLocalArray_ = new int [toLmpListSize];
+
         Pout<< "contiguous vector is false." << endl;
         for(label i = 0; i < toLmpListSize; i++)
         {
@@ -666,16 +675,20 @@ void  softParticleCloud::lammpsEvolveForward
             toLmpFoamCpuIdLocalArray_[i] = toLmpFoamCpuIdList[i];
             toLmpTagLocalArray_[i] = toLmpTagList[i];
         }
-    }
 
-    lammps_put_local_info
-    (
-        lmp_,
-        toLmpListSize,
-        toLmpFLocalArray_,
-        toLmpFoamCpuIdLocalArray_,
-        toLmpTagLocalArray_
-    );
+        lammps_put_local_info
+        (
+            lmp_,
+            toLmpListSize,
+            toLmpFLocalArray_,
+            toLmpFoamCpuIdLocalArray_,
+            toLmpTagLocalArray_
+        );
+
+        delete [] toLmpFLocalArray_;
+        delete [] toLmpFoamCpuIdLocalArray_;
+        delete [] toLmpTagLocalArray_;
+    }
 
     // delete [] toLmpFLocalArray_;
     // delete [] toLmpFoamCpuIdLocalArray_;
