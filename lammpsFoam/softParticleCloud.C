@@ -156,6 +156,14 @@ void softParticleCloud::initLammps()
         typeArray_
     );
 
+
+    Pout << "before moving..." << endl;
+
+    softParticle::trackingData td0(*this);
+    Cloud<softParticle>::move(td0, mesh_.time().deltaTValue());
+    Pout << "finished moving..." << endl;
+
+
     lammps_step(lmp_, 0);
 }
 
@@ -228,54 +236,30 @@ void softParticleCloud::initConstructParticles
    int* type
 )
 {
-    int offset;
-    for (int i = 0; i < nGlobal_; i++)
+    if (Pstream::master())
     {
-        offset = 3*i;
-        vector pos = vector
-        (
-            x[offset + 0],
-            x[offset + 1],
-            x[offset + 2]
-        );
-
-        vector velo = vector
-        (
-            v[offset + 0],
-            v[offset + 1],
-            v[offset + 2]
-        );
-
-        label cellI = mesh_.findCell(pos);
-
-        if (cellI >= 0) ++nLocal_;
-
-        label gCellI = cellI;
-
-        reduce(gCellI, maxOp<label>());
-
-        if (gCellI < 0)
+        int offset;
+        for (int i = 0; i < nGlobal_; i++)
         {
-            FatalErrorIn
+            offset = 3*i;
+            vector pos = mesh_.C()[0];
+            label cellI = 0;
+
+            vector velo = vector
             (
-                "softParticleCloud::initConstructParticles "
-            )   << "Particle leaving domain. \n "
-                << "Proc #: " << Pstream::myProcNo() << endl
-                << "Particle #: " << i << endl
-                << "Projected particle position: " << pos << endl
-                << abort(FatalError);
-        }
+                v[offset + 0],
+                v[offset + 1],
+                v[offset + 2]
+            );
 
-        scalar ds = scalar(d[i]);
-        scalar rhos = scalar(rho[i]);
-        label tags = int(tag[i]);
-        label lmpCpuIds = int(lmpCpuId[i]);
-        label types = int(type[i]);
+            scalar ds = scalar(d[i]);
+            scalar rhos = scalar(rho[i]);
+            label tags = int(tag[i]);
+            label lmpCpuIds = int(lmpCpuId[i]);
+            label types = int(type[i]);
 
-        // create a new softParticle when it is in the current processor
-        // but the computer is running much slower than before.
-        if (cellI >= 0)
-        {
+            // create a new softParticle when it is in the current processor
+            // but the computer is running much slower than before.
             softParticle* ptr =
                 new softParticle
                 (
@@ -299,6 +283,30 @@ void softParticleCloud::initConstructParticles
                 Pout<< "type is:" << types << endl;
             }
             addParticle(ptr);
+        }
+
+        label i = 0;
+        for
+        (
+            softParticleCloud::iterator pIter = begin();
+            pIter != end();
+            ++pIter, ++i
+        )
+        {
+            offset = 3*i;
+
+            vector pos = vector
+            (
+                x[offset + 0],
+                x[offset + 1],
+                x[offset + 2]
+            );
+
+            softParticle& p = pIter();
+
+            // Update position:
+            p.positionOld() = p.position();
+            p.moveU() = (pos - p.position())/mesh_.time().deltaTValue();
         }
     }
     Pout<< " After initialization, I have " << nLocal_

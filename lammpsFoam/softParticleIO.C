@@ -49,7 +49,7 @@ Foam::softParticle::softParticle
     type_(0),
     density_(0.0)
 {
-    Pout<< "Creating a particle from Istream.." << endl;
+    // Pout<< "Creating a particle from Istream.." << endl;
 
     if (readFields)
     {

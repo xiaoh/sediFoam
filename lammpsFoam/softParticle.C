@@ -134,7 +134,7 @@ bool Foam::softParticle::move
             if (isA<processorPolyPatch>(pbMesh[patch(face())]))
             {
                 td.switchProcessor = true;
-                Pout<< "Cross the processor boundary.." << endl;
+                // Pout<< "Cross the processor boundary.." << endl;
             }
         }
     }
