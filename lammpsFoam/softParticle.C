@@ -105,7 +105,7 @@ bool Foam::softParticle::move
     scalar tEnd = (1.0 - stepFraction())*trackTime;
     scalar dtMax = tEnd;
 
-    while (td.keepParticle && !td.switchProcessor && tEnd > SMALL)
+    while (td.keepParticle && !td.switchProcessor && tEnd > ROOTVSMALL)
     {
         if (debug)
         {
@@ -134,7 +134,7 @@ bool Foam::softParticle::move
             if (isA<processorPolyPatch>(pbMesh[patch(face())]))
             {
                 td.switchProcessor = true;
-                // Pout<< "Cross the processor boundary.." << endl;
+                Pout<< "Cross the processor boundary.." << endl;
             }
         }
     }
@@ -174,6 +174,21 @@ void Foam::softParticle::hitPatch
 {
     td.keepParticle = false;
 }
+
+void Foam::softParticle::transformProperties (const tensor& T)
+{
+    particle::transformProperties(T);
+    moveU_ = transform(T, moveU_);
+    Pout<< "hitting cyclic patch T" << endl;
+}
+
+
+void Foam::softParticle::transformProperties(const vector& separation)
+{
+    particle::transformProperties(separation);
+    Pout<< "hitting cyclic patch separation" << endl;
+}
+
 
 
 } // namespace Foam

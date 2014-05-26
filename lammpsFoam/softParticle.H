@@ -286,6 +286,15 @@ public:
                 trackingData& td
             );
 
+            //- Transform the physical properties of the particle
+            //  according to the given transformation tensor
+            virtual void transformProperties(const tensor& T);
+
+            //- Transform the physical properties of the particle
+            //  according to the given separation vector
+            virtual void transformProperties(const vector& separation);
+
+
 
     // I-O
 
