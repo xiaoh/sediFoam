@@ -145,7 +145,6 @@ public:
         //- Construct null
         enhancedCloud
         (
-             const volPointInterpolation& vpi,
              const volVectorField& U,
              const volScalarField& p,
              volVectorField& Ue,
@@ -154,7 +153,6 @@ public:
              volScalarField& alpha,
              IOdictionary& cloudDict,
              IOdictionary& transDict,
-             scalar bwDxRatio,
              scalar diffusionBandWidth,
              scalar diffusionSteps
         );

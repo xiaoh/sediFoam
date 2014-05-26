@@ -274,7 +274,6 @@ void enhancedCloud::calcTcFields()
 //- Construct from component
 enhancedCloud::enhancedCloud
 (
-    const volPointInterpolation& vpi,
     const volVectorField& U,
     const volScalarField& p,
     volVectorField& Ue,
@@ -283,12 +282,11 @@ enhancedCloud::enhancedCloud
     volScalarField& alpha,
     IOdictionary& cloudDict,
     IOdictionary& transDict,
-    scalar bwDxRatio,
     scalar diffusionBandWidth,
     scalar diffusionSteps
 )
 :
-    softParticleCloud(vpi, U, p, Ue, nu, alpha, cloudDict),
+    softParticleCloud(U, p, Ue, nu, alpha, cloudDict),
     mesh_(U.mesh()),
     Uf_(Uf),
     UfSmoothed_(Uf),
@@ -475,11 +473,15 @@ void enhancedCloud::evolve()
         // (Harvest XLocal & VLocal)  Lammps --> Cloud
         setPositionVeloCpuId(XLocal, VLocal, lmpCpuIdLocal);
 
+        Pout<< "Particle number before moving: " << size() << endl;
+
         diffusionRunTime_.cpuTimeIncrement();
         // move particle to the new position
         Cloud<softParticle>::move(td0, mesh_.time().deltaTValue());
 
         particleMoveTime_ += diffusionRunTime_.cpuTimeIncrement();
+
+        Pout<< "Particle number after moving: " << size() << endl;
 
         if (particleCount_ != size())
         {

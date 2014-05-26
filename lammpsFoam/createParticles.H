@@ -2,15 +2,10 @@
 
 Info << "Constructing particles and cloud\n" << endl;
 
-pointMesh pMesh(mesh);
-//volPointInterpolation vpi(mesh, pMesh);
-volPointInterpolation vpi(mesh);
-
 // In MD section, alpha is only kept as a reference. No space
 // allocated. Actual field was kept in fluid section.
 enhancedCloud cloud
 (
-    vpi,
     U,
     p,
     Ua,
@@ -19,7 +14,6 @@ enhancedCloud cloud
     alpha,
     cloudProperties,
     transportProperties,
-    bwDxRatio,
     diffusionBandWidth,
     diffusionSteps
 );

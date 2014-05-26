@@ -45,7 +45,6 @@ SourceFiles
 
 #include "LammpsCollection.H"
 #include "softParticle.H"
-#include "volPointInterpolation.H"
 #include "interpolation.H"
 #include <math.h>
 
@@ -107,8 +106,6 @@ class softParticleCloud
             const Time& runTime_;
 
             const fvMesh& mesh_;
-
-            const volPointInterpolation& volPointInterpolation_;
 
             IOdictionary cloudProperties_;
 
@@ -241,7 +238,6 @@ public:
         //- Construct from components
         softParticleCloud
         (
-			const volPointInterpolation& vpi,
 			const volVectorField& U,
 			const volScalarField& p,
             volVectorField& Ue,

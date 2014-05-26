@@ -122,22 +122,6 @@
         )
     );
 
-    // default bw/Dx value if not defined in dictionary
-    scalar bwDxRatio = 2.0;
-    if (cloudProperties.found("bandWidthCellSizeRatio"))
-    {
-        bwDxRatio =
-            readScalar
-            (
-                cloudProperties.lookup("bandWidthCellSizeRatio")
-            );
-    }
-    else
-    {
-        Info<< "*** Band width cell size ratio set to 2.0 by default!"
-            << endl;
-    }
-
     // default diffusion band width if not defined in dictionary
     scalar diffusionBandWidth = 0.006;
     if (cloudProperties.found("diffusionBandWidth"))

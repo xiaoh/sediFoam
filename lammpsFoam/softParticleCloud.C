@@ -384,7 +384,6 @@ void softParticleCloud::flattenList
 //- Construct from components
 softParticleCloud::softParticleCloud
 (
-    const volPointInterpolation& vpi,
     const volVectorField& U,
     const volScalarField& p,
     volVectorField& Ue,
@@ -398,7 +397,6 @@ softParticleCloud::softParticleCloud
     runTime_(U.time()),
     mesh_(U.mesh()),
     nu_(nu),
-    volPointInterpolation_(vpi),
     cloudProperties_(cloudProperties),
     Ue_(Ue),
     U_(U),
