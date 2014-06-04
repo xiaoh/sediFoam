@@ -102,7 +102,7 @@ class enhancedCloud
         fvMesh diffusionMesh_;
         simpleControl simple_;
 
-        scalar diffusionTimeCount_;
+        scalarList diffusionTimeCount_;
         scalar particleMoveTime_;
 
 
@@ -192,7 +192,7 @@ public:
             }
 
             //- Return total diffusion time
-            const scalar& diffusionTimeCount() const
+            const scalarList& diffusionTimeCount() const
             {
                 return diffusionTimeCount_;
             }

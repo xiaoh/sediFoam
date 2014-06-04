@@ -53,19 +53,22 @@ int main(int argc, char *argv[])
     #include "createMesh.H"
     #include "readEnvironmentalProperties.H"
     #include "createFields.H"
+    scalar t0 = runTime.elapsedCpuTime();
     #include "createParticles.H"
     #include "initContinuityErrs.H"
     // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-    scalarList splitTime(2,0.0);
+    scalarList splitTime(5,0.0);
 
     Info<< "\nStarting time loop\n" << endl;
     #include "liftDragCoeffs.H"
         
-    splitTime[1] += runTime.cpuTimeIncrement();
+    splitTime[1] += runTime.elapsedCpuTime() - t0;
 
     while (runTime.run())
     {
+        t0 = runTime.elapsedCpuTime();
+
         runTime++;
         Info<< "Time = " << runTime.timeName() << nl << endl;
 
@@ -90,25 +93,42 @@ int main(int argc, char *argv[])
             */
         }
 
-        splitTime[0] += runTime.cpuTimeIncrement();
-
         #include "DDtU.H"
         #include "kEpsilon.H"
 
+        splitTime[0] += runTime.elapsedCpuTime() - t0;
+        t0 = runTime.elapsedCpuTime();
+
         // get drag from latest velocity fields and evolve particles.
         #include "moveParticles.H"
+
+        splitTime[1] += runTime.elapsedCpuTime() - t0;
+        t0 = runTime.elapsedCpuTime();
+
         #include "liftDragCoeffs.H"
         #include "write.H"
 
-        splitTime[1] += runTime.cpuTimeIncrement();
+        splitTime[2] += runTime.elapsedCpuTime() - t0;
+        t0 = runTime.elapsedCpuTime();
 
         Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
             << "  ClockTime = " << runTime.elapsedClockTime() << " s"
-            << "  OpenFOAM/particle(all)/diffusion/particle move = (" 
+            << "  OpenFOAM/evolve/calcTcField/diffusion/particle move = (" 
             << splitTime[0] << ", "
             << splitTime[1] << ", "
-            << cloud.diffusionTimeCount() << ", "
+            << splitTime[2] << ", "
+            << cloud.diffusionTimeCount()[0] << ", "
+            << cloud.diffusionTimeCount()[1] << ", "
             << cloud.particleMoveTime() << ") s"
+            << nl << endl;
+
+        Info<< "assemble/transpose/flatten/foam->lammps/lammps/lammps->foam = (" 
+            << cloud.cpuTimeSplit()[0] << ", "
+            << cloud.cpuTimeSplit()[1] << ", "
+            << cloud.cpuTimeSplit()[2] << ", "
+            << cloud.cpuTimeSplit()[3] << ", "
+            << cloud.cpuTimeSplit()[4] << ", "
+            << cloud.cpuTimeSplit()[5] << ") s"
             << nl << endl;
     }
 

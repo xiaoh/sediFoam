@@ -113,6 +113,9 @@ class softParticleCloud
         //  Relation:  solidStepsPerDt_ = nsubsteps * subCycles + nExtra
         scalar solidStepsPerDt_;
 
+        //- Cpu time spent on different parts
+        scalarList cpuTimeSplit_;
+
 
     // Private Member Functions
 
@@ -289,6 +292,12 @@ public:
             iterator end()
             {
                 return IDLList<softParticle>::end();
+            };
+
+            //- Cpu time spent on different parts
+            scalarList cpuTimeSplit()
+            {
+                return cpuTimeSplit_;
             };
 
 

@@ -344,7 +344,7 @@ enhancedCloud::enhancedCloud
         )
     ),
     simple_(diffusionMesh_),
-    diffusionTimeCount_(0.0),
+    diffusionTimeCount_(2, 0.0),
     particleMoveTime_(0.0)
 {
     drag_ = Foam::dragModel::New(cloudDict, transDict, pAlpha_, pDia_);
@@ -495,7 +495,7 @@ void enhancedCloud::evolve()
         }
 
         // make sure all particles are in cell.
-        assertParticleInCell();
+        // assertParticleInCell();
 
         // update Uri (relative particle velocities) here.
         updateParticleUr();
@@ -544,7 +544,7 @@ void enhancedCloud::evolve()
 
 void enhancedCloud::smoothField(volScalarField& sFieldIn)
 {
-    diffusionRunTime_.cpuTimeIncrement();
+    scalar t0 = runTime().elapsedCpuTime();
     volScalarField diffWorkField
     (
         IOobject
@@ -574,6 +574,9 @@ void enhancedCloud::smoothField(volScalarField& sFieldIn)
 
     Info<< "smoothing " << sFieldIn.name() << endl;
 
+    diffusionTimeCount_[0] += runTime().elapsedCpuTime() - t0;
+    t0 = runTime().elapsedCpuTime();
+
     while (diffusionRunTime_.loop())
     {
         while (simple_.correctNonOrthogonal())
@@ -581,16 +584,20 @@ void enhancedCloud::smoothField(volScalarField& sFieldIn)
             solve(fvm::ddt(diffWorkField) - fvm::laplacian(DT, diffWorkField));
         }
     }
+
+    diffusionTimeCount_[1] += runTime().elapsedCpuTime() - t0;
+    t0 = runTime().elapsedCpuTime();
+
     diffusionRunTime_.setTime(startTime,startIndex);
 
     sFieldIn.internalField() = diffWorkField.internalField();
-    diffusionTimeCount_ += diffusionRunTime_.cpuTimeIncrement();
+    diffusionTimeCount_[0] += runTime().elapsedCpuTime() - t0;
 }
 
 
 void enhancedCloud::smoothField(volVectorField& sFieldIn)
 {
-    diffusionRunTime_.cpuTimeIncrement();
+    scalar t0 = runTime().elapsedCpuTime();
     volVectorField diffWorkField
     (
         IOobject
@@ -620,6 +627,9 @@ void enhancedCloud::smoothField(volVectorField& sFieldIn)
 
     Info<< "smoothing " << sFieldIn.name() << endl;
 
+    diffusionTimeCount_[0] += runTime().elapsedCpuTime() - t0;
+    t0 = runTime().elapsedCpuTime();
+
     while (diffusionRunTime_.loop())
     {
         while (simple_.correctNonOrthogonal())
@@ -627,10 +637,14 @@ void enhancedCloud::smoothField(volVectorField& sFieldIn)
             solve(fvm::ddt(diffWorkField) - fvm::laplacian(DT, diffWorkField));
         }
     }
+
+    diffusionTimeCount_[1] += runTime().elapsedCpuTime() - t0;
+    t0 = runTime().elapsedCpuTime();
+
     diffusionRunTime_.setTime(startTime,startIndex);
 
     sFieldIn.internalField() = diffWorkField.internalField();
-    diffusionTimeCount_ += diffusionRunTime_.cpuTimeIncrement();
+    diffusionTimeCount_[0] += runTime().elapsedCpuTime() - t0;
 }
 
 

@@ -401,7 +401,8 @@ softParticleCloud::softParticleCloud
     Ue_(Ue),
     U_(U),
     pf_(p),
-    gamma_(alpha)
+    gamma_(alpha),
+    cpuTimeSplit_(6, 0.0)
 {
     subCycles_ = readScalar(cloudProperties_.lookup("subCycles"));
 
@@ -554,6 +555,7 @@ void  softParticleCloud::lammpsEvolveForward
     // Start putting information to LAMMPS
     labelList lmpParticleNo(nprocs, 0);
 
+    scalar t0 = runTime_.elapsedCpuTime();
     // Calculate the number of particles in each LmpCpu
     // and obtain the drag force
     vectorList fromFoamDragList(size(), vector::zero);
@@ -610,6 +612,9 @@ void  softParticleCloud::lammpsEvolveForward
         assembleLmpCpuIdList
     );
 
+    cpuTimeSplit_[0] += runTime_.elapsedCpuTime() - t0;
+    t0 = runTime_.elapsedCpuTime();
+
     // transpose the lists in each foamCpu to lmpCpu
     List<vectorList> toLmpDragListList(nprocs);
     List<labelList> toLmpFoamCpuIdListList(nprocs);
@@ -623,12 +628,15 @@ void  softParticleCloud::lammpsEvolveForward
     );
     transposeAmongProcs<labelList> (fromFoamTagListList, toLmpTagListList);
 
+    cpuTimeSplit_[1] += runTime_.elapsedCpuTime() - t0;
+    t0 = runTime_.elapsedCpuTime();
+
+    // flatten the lists obtained for each LmpCpu
     label toLmpListSize = 0;
     forAll(toLmpTagListList, listI)
     {
         toLmpListSize += toLmpTagListList[listI].size();
     }
-    // flatten the lists obtained for each LmpCpu
     vectorList toLmpDragList(toLmpListSize, vector::zero);
     labelList toLmpFoamCpuIdList(toLmpListSize, 0);
     labelList toLmpTagList(toLmpListSize, 0);
@@ -636,6 +644,9 @@ void  softParticleCloud::lammpsEvolveForward
     flattenList<vectorList> (toLmpDragListList, toLmpDragList);
     flattenList<labelList> (toLmpFoamCpuIdListList, toLmpFoamCpuIdList);
     flattenList<labelList> (toLmpTagListList, toLmpTagList);
+
+    cpuTimeSplit_[2] += runTime_.elapsedCpuTime() - t0;
+    t0 = runTime_.elapsedCpuTime();
 
     if (contiguous<vector>())
     {
@@ -692,9 +703,13 @@ void  softParticleCloud::lammpsEvolveForward
     // delete [] toLmpFoamCpuIdLocalArray_;
     // delete [] toLmpTagLocalArray_;
 
+    cpuTimeSplit_[3] += runTime_.elapsedCpuTime() - t0;
+    t0 = runTime_.elapsedCpuTime();
     // Ask lammps to move certain steps forward
     lammps_step(lmp_, nstep);
 
+    cpuTimeSplit_[4] += runTime_.elapsedCpuTime() - t0;
+    t0 = runTime_.elapsedCpuTime();
     // Start getting information from LAMMPS
     // Harvest the number of particles in each lmp cpu
     int lmpNLocal = lammps_get_local_n(lmp_);
@@ -755,6 +770,9 @@ void  softParticleCloud::lammpsEvolveForward
     delete [] fromLmpLmpCpuIdArrayLocal;
     delete [] fromLmpTagArrayLocal;
 
+    cpuTimeSplit_[4] += runTime_.elapsedCpuTime() - t0;
+    t0 = runTime_.elapsedCpuTime();
+
     // Separate the information from LAMMPS into  lists of
     // different processors
     List<vectorList> fromLmpXListList(nprocs);
@@ -802,6 +820,9 @@ void  softParticleCloud::lammpsEvolveForward
         fromLmpFoamCpuIdList
     );
 
+    cpuTimeSplit_[0] += runTime_.elapsedCpuTime() - t0;
+    t0 = runTime_.elapsedCpuTime();
+
     // Transpose the lists in each LmpCpu to FoamCpu
     List<vectorList> toFoamXListList(nprocs);
     List<vectorList> toFoamVListList(nprocs);
@@ -822,6 +843,9 @@ void  softParticleCloud::lammpsEvolveForward
         toFoamLmpCpuIdListList
     );
     transposeAmongProcs<labelList> (fromLmpTagListList, toFoamTagListList);
+
+    cpuTimeSplit_[1] += runTime_.elapsedCpuTime() - t0;
+    t0 = runTime_.elapsedCpuTime();
 
     // Collect all the information transfered from other processors in lists
     // and combine them into one list
@@ -870,6 +894,9 @@ void  softParticleCloud::lammpsEvolveForward
         // lmpCpuId
         lmpCpuIdLocal[fromI] = toFoamLmpCpuIdList[toI];
     }
+
+    cpuTimeSplit_[2] += runTime_.elapsedCpuTime() - t0;
+    t0 = runTime_.elapsedCpuTime();
 
 } // Job done; Proceed to next fluid calculation step.
 
