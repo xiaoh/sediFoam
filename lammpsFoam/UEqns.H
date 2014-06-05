@@ -64,6 +64,7 @@ fvVectorMatrix UbEqn(Ub, Ub.dimensions()*dimVol/dimTime);
       - fvm::Sp(dragCoef/rhob, Ub)
     //+ alpha/rhob*dragCoef*Ua   // Explicit drag transfered to p-equation
       + alpha/rhob*(liftCoeff + Cvm*rhob*DDtUa)
+      + gradP.flowDirection()*gradP.value() // Adding pressure gradient
     );
 
     UbEqn.relax();

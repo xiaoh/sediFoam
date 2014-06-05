@@ -39,6 +39,7 @@ Description
 #include "mpi.h"
 
 #include "enhancedCloud.H"
+#include "chPressureGrad.H"
 
 //#define DEBUG_HYBRID
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -81,17 +82,7 @@ int main(int argc, char *argv[])
 
 
         // --- PISO loop
-        for (int corr = 0; corr < nCorr; corr++)
-        {
-            #include "pEqn.H"
-
-            /*
-                if (correctAlpha)
-                {
-                    // # include "alphaEqn.H"
-                }
-            */
-        }
+        #include "pEqn.H"
 
         #include "DDtU.H"
         #include "kEpsilon.H"

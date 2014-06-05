@@ -1,10 +1,13 @@
+volScalarField rUbA = 1.0/UbEqn.A();
+
+for (int corr = 0; corr < nCorr; corr++)
 {
     surfaceScalarField alphaf = fvc::interpolate(alpha);
     surfaceScalarField betaf = scalar(1) - alphaf;
 
     // volScalarField rUaA = 1.0/UaEqn.A();
 
-    volScalarField rUbA = 1.0/UbEqn.A();
+    rUbA = 1.0/UbEqn.A();
 
     // surfaceScalarField rUaAf = fvc::interpolate(rUaA);
     surfaceScalarField rUbAf = fvc::interpolate(rUbA);
@@ -90,4 +93,4 @@
     }
 }
 
-#include "continuityErrs.H"
+gradP.adjust(rUbA);
