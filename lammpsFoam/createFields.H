@@ -232,7 +232,7 @@
     // Adding pressure gradient
     chPressureGrad::initPressureGrad(transportProperties);
 
-    chPressureGrad gradP(Ub,"gradP","LAMMPS");
+    chPressureGrad gradP(Ub,alpha,"gradP","LAMMPS");
 
     label pRefCell = 0;
     scalar pRefValue = 0.0;

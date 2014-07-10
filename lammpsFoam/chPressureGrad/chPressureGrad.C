@@ -101,12 +101,14 @@ namespace Foam {
   chPressureGrad::chPressureGrad
   (
    volVectorField& U,
+   volScalarField& alpha,
    word name,
    word solverName,
    word dictDir
    )
   :
     U_(U), 
+    alpha_(alpha), 
     name_(name),
     solverName_(solverName),
     value_(name,  dimensionSet(0, 1, -2, 0, 0), 0.0),
@@ -163,8 +165,24 @@ namespace Foam {
   {
     if(chFlowMode_)
       {
+          volScalarField beta
+          (
+              IOobject
+              (
+                  "beta",
+                  U_.time().timeName(),
+                  U_.mesh(),
+                  IOobject::NO_READ,
+                  IOobject::NO_WRITE
+              ),
+              scalar(1) - alpha_
+          );
+
           dimensionedScalar magUbarStar =
-              (flowDirection_ & U_)().weightedAverage(U_.mesh().V());
+              (flowDirection_ & U_)().weightedAverage(beta*alpha_.mesh().V());
+
+          dimensionedScalar volAveAlpha =
+              alpha_.weightedAverage(alpha_.mesh().V());
 
           if(specifiedQuantity_ == "Ubar")
           {
@@ -172,7 +190,8 @@ namespace Foam {
               // adjust the average flow-rate to the correct value;
               // magUbar: target; magUbarStar: actual in simulation.
               dimensionedScalar gradPplus =
-                  (magUbar_ - magUbarStar)/rUA.weightedAverage(U_.mesh().V());
+                  (magUbar_ - magUbarStar)
+                 /rUA.weightedAverage(U_.mesh().V());
               
               U_ += flowDirection_ * rUA * gradPplus;
               value_ += gradPplus;
@@ -181,7 +200,10 @@ namespace Foam {
               Info<< solverName_ 
                   << " uncorrected Ubar = " << magUbarStar.value() 
                   << "  "
+                  << "with averaged solid volume fraction = "
+                  << volAveAlpha.value() << "  "
                   << name_ << " = " << value_.value() << endl;
+
           }
           else if(specifiedQuantity_ == "gradPbar")
           {

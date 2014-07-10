@@ -66,7 +66,8 @@ namespace Foam
     static dimensionedScalar magUbar_;
     static word specifiedQuantity_;
 
-    volVectorField & U_;
+    volVectorField& U_;
+    const volScalarField& alpha_;
     const word name_;
     const word solverName_;
 
@@ -83,9 +84,11 @@ namespace Foam
     //- Construct from components
     chPressureGrad
     (
-     volVectorField& U,
-     word name, word solverName,
-     word dictDir="uniform");
+        volVectorField& U,
+        volScalarField& alpha,
+        word name, word solverName,
+        word dictDir="uniform"
+    );
 
 
     // Destructor
