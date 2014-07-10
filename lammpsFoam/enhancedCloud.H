@@ -207,6 +207,9 @@ public:
             //--- Not parallel yet.
             void dragInfo();
 
+            //- Print average info of the particles
+            void averageInfo();
+
 }; // End of class "enhancedCloud"
 
 

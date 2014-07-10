@@ -786,6 +786,37 @@ void enhancedCloud::dragInfo()
         << endl;
 }
 
+void enhancedCloud::averageInfo()
+{
+    vector averageVel(0,0,0);
+    vector totalVel(0,0,0);
+    label localNumber(0);
+    label totalNumber(0);
+
+    label particleI = 0;
+    for
+    (
+        softParticleCloud::iterator pIter = softParticleCloud::begin();
+        pIter != softParticleCloud::end();
+        ++pIter, ++particleI
+    )
+    {
+        softParticle& p = pIter();
+
+        localNumber += 1;
+        totalVel += p.U();
+    }
+
+    reduce(totalVel, sumOp<vector>());
+    reduce(localNumber, sumOp<label>());
+    totalNumber = localNumber;
+    averageVel = totalVel/totalNumber;
+
+    Info<< "total number of particles is: " << totalNumber << endl;
+    Info<< "total velocity of particles is: " << totalVel << endl;
+    Info<< "average velocity of all particles is: " << averageVel << endl;
+}
+
 } // End namespace Foam
 
 
