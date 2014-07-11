@@ -228,6 +228,12 @@ void enhancedCloud::calcTcFields()
 
         Omega_.internalField() *= 0;
 
+        forAll(Omega_.internalField(), ceI)
+        {
+            Omega_.internalField()[ceI] = 
+                mag(Asrc_.internalField()[ceI])/mag(Ue_.internalField()[ceI]-UfSmoothed_[ceI]);
+        }
+
         // F1 and F2 are calculated to show that
         // the momentum is conservative
         vector Ftotal1(vector::zero);

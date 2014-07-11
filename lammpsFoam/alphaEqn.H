@@ -46,6 +46,8 @@
           - sqr(scalar(1) - alpha));
         */
         beta = scalar(1) - alpha;
+        alpha.correctBoundaryConditions();
+        beta.correctBoundaryConditions();
     }
 
     Info<< "Dispersed phase volume fraction = "
