@@ -31,7 +31,8 @@ g 		    (0 -9.8 0);
 
 dragModel   SyamlalOBrien;
 subCycles	2;
-bandWidthCellSizeRatio 2;
+// bandWidthCellSizeRatio 2;
+diffusionSteps  3;
 diffusionBandWidth  0.0036;
 
 

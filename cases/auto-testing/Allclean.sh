@@ -24,11 +24,11 @@ for folder in *; do
     cd $exampleDIR
 done
 
-cd $reportDIR
-
-for folder in *; do
-    cd $folder 
-    echo "cleaning: $PWD"
-    rm *.log *.pdf *.aux *.out
-    cd ..
-done
+# cd $reportDIR
+# 
+# for folder in *; do
+#     cd $folder 
+#     echo "cleaning: $PWD"
+#     rm *.log *.pdf *.aux *.out
+#     cd ..
+# done
