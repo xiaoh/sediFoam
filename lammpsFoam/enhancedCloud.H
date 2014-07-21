@@ -105,6 +105,7 @@ class enhancedCloud
         scalarList diffusionTimeCount_;
         scalar particleMoveTime_;
 
+        label UfSmoothFlag_;
 
     // Private Member Functions
 

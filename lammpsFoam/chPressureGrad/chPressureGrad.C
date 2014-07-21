@@ -178,6 +178,8 @@ namespace Foam {
               scalar(1) - alpha_
           );
 
+          beta.correctBoundaryConditions();
+
           dimensionedScalar magUbarStar =
               (flowDirection_ & U_)().weightedAverage(beta*alpha_.mesh().V());
 
@@ -192,8 +194,8 @@ namespace Foam {
               dimensionedScalar gradPplus =
                   (magUbar_ - magUbarStar)
                  /rUA.weightedAverage(U_.mesh().V());
-              
-              U_ += flowDirection_ * rUA * gradPplus;
+
+              U_ += flowDirection_*rUA*gradPplus;
               value_ += gradPplus;
               gradPDict_.set(name_, value_);
               

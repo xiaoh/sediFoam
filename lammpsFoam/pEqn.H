@@ -34,6 +34,8 @@ for (int corr = 0; corr < nCorr; corr++)
         }
     }
 
+    Ua.correctBoundaryConditions();
+
     phia = (fvc::interpolate(Ua) & mesh.Sf());
       //  + fvc::ddtPhiCorr(rUaA, Ua, phia)
       //  + phiDraga;
@@ -94,3 +96,5 @@ for (int corr = 0; corr < nCorr; corr++)
 }
 
 gradP.adjust(rUbA);
+
+Ub.correctBoundaryConditions();

@@ -176,7 +176,6 @@ void enhancedCloud::calcTcFields()
 
     Jd_ = drag_->Jd(magUri_);
 
-
     bool semiImplicit = 0;
     if (semiImplicit)
     {
@@ -199,7 +198,6 @@ void enhancedCloud::calcTcFields()
             Asrc_.internalField()[cellI] += omg * p.U();
             ++pIter;
         }
-
     }
     else
     {
@@ -223,17 +221,14 @@ void enhancedCloud::calcTcFields()
 
             // accumulate drag from particles to host cells
             // to be smoothed later!
+            Omega_.internalField()[cellI] += omg;
             Asrc_.internalField()[cellI] += omg*(p.U() - UfSmoothed_[cellI]);
+            // Asrc_.internalField()[cellI] += omg*(p.U() - Uf_[cellI]);
         }
 
         Omega_.internalField() *= 0;
 
-        forAll(Omega_.internalField(), ceI)
-        {
-            Omega_.internalField()[ceI] = 
-                mag(Asrc_.internalField()[ceI])
-              /(mag(Ue_.internalField()[ceI]-UfSmoothed_[ceI])+ROOTVSMALL);
-        }
+        // smoothField(Omega_);
 
         // F1 and F2 are calculated to show that
         // the momentum is conservative
@@ -271,6 +266,9 @@ void enhancedCloud::calcTcFields()
 
         Info<< "total F before: " << Ftotal1 << endl;
         Info<< "total F after: " << Ftotal2 << endl;
+
+        Asrc_.correctBoundaryConditions();
+        Omega_.correctBoundaryConditions();
     }
 
 }
@@ -352,7 +350,8 @@ enhancedCloud::enhancedCloud
     ),
     simple_(diffusionMesh_),
     diffusionTimeCount_(2, 0.0),
-    particleMoveTime_(0.0)
+    particleMoveTime_(0.0),
+    UfSmoothFlag_(0)
 {
     drag_ = Foam::dragModel::New(cloudDict, transDict, pAlpha_, pDia_);
 
@@ -414,20 +413,28 @@ enhancedCloud::enhancedCloud
     // initialise drag force on each particle
     pDrag_ = vectorList(particleCount_);
 
-
     // initialize alpha and Ue field
     particleToEulerianField();
 
     setupParticleDia();
 
+    UfSmoothFlag_ = cloudProperties_.lookupOrDefault("UfSmooth",1);
+
     // smooth fluid velocity to initialise the lift&drag coefficients
     // gamma is smoothed field since we smooth it in particleToEulerianField();
     UfSmoothed_.internalField() =
         Uf_.internalField()*(1 - gamma_.internalField());
-    smoothField(UfSmoothed_);
+
+    if (UfSmoothFlag_ == 1)
+    {
+        Info<< "smooth Uf..." << endl;
+        smoothField(UfSmoothed_);
+    }
 
     UfSmoothed_.internalField() /=
         (1 - gamma_.internalField());
+
+    UfSmoothed_.correctBoundaryConditions();
 }
 
 
@@ -449,10 +456,16 @@ void enhancedCloud::evolve()
     UfSmoothed_.internalField() =
         Uf_.internalField()*(1 - gamma_.internalField());
 
-    smoothField(UfSmoothed_);
+    if (UfSmoothFlag_ == 1)
+    {
+        Info<< "smooth Uf..." << endl;
+        smoothField(UfSmoothed_);
+    }
 
     UfSmoothed_.internalField() /=
         (1 - gamma_.internalField());
+
+    UfSmoothed_.correctBoundaryConditions();
 
     // evolve Ns steps forward each time when Lammps is called.
     for (label k = 0; k < Ns; k++)
@@ -519,35 +532,6 @@ void enhancedCloud::evolve()
         << size() << " local particles has been moved. " << endl;
 }
 
-
-
-//- comments
-//- comments
-// template <class valueType>
-// void enhancedCloud::smoothField(GeometricField <valueType, fvPatchField, volMesh> & sFieldIn)
-// {
-//   valueType  diffWorkField
-//     (
-//        IOobject
-//          (
-//             "tempDiffu",
-//             diffusionRunTime_.timeName(),
-//             diffusionMesh_,
-//             IOobject::NO_READ,
-//             IOobject::NO_WRITE
-//         ),
-//        diffusionMesh_,
-//        sFieldIn.dimension(),
-//        sFieldIn.internalField(),
-//        zeroGradientFvPatchScalarField::typeName
-//      );
-//
-//   dimensionedScalar DT("DT", dimensionSet(0, 2, -1, 0, 0), 1.0);
-//
-//   solve( fvm::ddt(diffWorkField) - fvm::laplacian(DT, diffWorkField) );
-//
-//   sFieldIn.internalField() = diffWorkField.internalField();
-// }
 
 void enhancedCloud::smoothField(volScalarField& sFieldIn)
 {
@@ -714,6 +698,9 @@ void enhancedCloud::particleToEulerianField()
 
     Info<< "total U solid before: " << Utotal1 << endl;
     Info<< "total U solid after: " << Utotal2 << endl;
+
+    Ue_.correctBoundaryConditions();
+    gamma_.correctBoundaryConditions();
 }
 
 

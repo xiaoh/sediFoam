@@ -107,8 +107,6 @@ class softParticleCloud
 
             const fvMesh& mesh_;
 
-            IOdictionary cloudProperties_;
-
         //- Cycles in LAMMPS per time step
         //  Relation:  solidStepsPerDt_ = nsubsteps * subCycles + nExtra
         scalar solidStepsPerDt_;
@@ -187,6 +185,7 @@ protected:
         // Obtained by ensemble average from LAMMPS
         volVectorField& Ue_;
 
+        IOdictionary cloudProperties_;
 
         // References to the physical field
 
