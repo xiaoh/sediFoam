@@ -66,7 +66,7 @@ void  enhancedCloud::updateParticleAlpha()
         label cellI = p.cell();
         if (cellI<0) 
         {
-            Pout << "cell not found!" << endl;
+            Info << "cell not found!" << endl;
             continue;
         }
         pAlpha_[particleI] = gamma_[cellI];
@@ -228,8 +228,6 @@ void enhancedCloud::calcTcFields()
 
         Omega_.internalField() *= 0;
 
-        // smoothField(Omega_);
-
         // F1 and F2 are calculated to show that
         // the momentum is conservative
         vector Ftotal1(vector::zero);
@@ -244,7 +242,11 @@ void enhancedCloud::calcTcFields()
         // Smoothing operations
         Asrc_.internalField() =
                 Asrc_.internalField()*(1 - gamma_.internalField());
-        smoothField(Asrc_);
+
+        if (dragSmoothFlag_ == 1)
+        {
+            smoothField(Asrc_);
+        }
 
         Asrc_.internalField() /=
             (1 - gamma_.internalField());
@@ -269,6 +271,7 @@ void enhancedCloud::calcTcFields()
 
         Asrc_.correctBoundaryConditions();
         Omega_.correctBoundaryConditions();
+        Info<< "Asrc is: " << Asrc_ << endl;
     }
 
 }
@@ -331,7 +334,7 @@ enhancedCloud::enhancedCloud
            vector::zero
         ),
         zeroGradientFvPatchVectorField::typeName
-     ),
+    ),
     diffusionRunTime_
     (
         "controlDiffDict",
@@ -351,7 +354,10 @@ enhancedCloud::enhancedCloud
     simple_(diffusionMesh_),
     diffusionTimeCount_(2, 0.0),
     particleMoveTime_(0.0),
-    UfSmoothFlag_(0)
+    UfSmoothFlag_(0),
+    UpSmoothFlag_(0),
+    dragSmoothFlag_(0),
+    alphaSmoothFlag_(0)
 {
     drag_ = Foam::dragModel::New(cloudDict, transDict, pAlpha_, pDia_);
 
@@ -404,6 +410,11 @@ enhancedCloud::enhancedCloud
     Info<< "diffusion time is: " << diffusionTime << endl;
     Info<< "diffusion time step is: " << diffusionDeltaT << endl;
 
+    UfSmoothFlag_ = cloudProperties_.lookupOrDefault("UfSmooth",1);
+    UpSmoothFlag_ = cloudProperties_.lookupOrDefault("UpSmooth",1);
+    dragSmoothFlag_ = cloudProperties_.lookupOrDefault("dragSmooth",1);
+    alphaSmoothFlag_ = cloudProperties_.lookupOrDefault("alphaSmooth",1);
+
     // initial quantities for dragModel
     pDia_.setSize(particleCount_);
     pAlpha_.setSize(particleCount_);
@@ -417,8 +428,6 @@ enhancedCloud::enhancedCloud
     particleToEulerianField();
 
     setupParticleDia();
-
-    UfSmoothFlag_ = cloudProperties_.lookupOrDefault("UfSmooth",1);
 
     // smooth fluid velocity to initialise the lift&drag coefficients
     // gamma is smoothed field since we smooth it in particleToEulerianField();
@@ -642,6 +651,7 @@ void enhancedCloud::smoothField(volVectorField& sFieldIn)
 //- Refresh Ue and Gamma using Gaussian averaging
 void enhancedCloud::particleToEulerianField()
 {
+    Info<< "particle to eulerian field ..." << endl;
     gamma_.internalField() *= 0.0;
     Ue_.internalField() *= 0.0;
 
@@ -674,8 +684,16 @@ void enhancedCloud::particleToEulerianField()
     Ue_.internalField() /= mesh_.V();
 
     // smooth alpha and Ua field
-    smoothField(gamma_);
-    smoothField(Ue_);
+    if (alphaSmoothFlag_ == 1)
+    {
+        Info<< "smoothing alpha flag on..." << endl;
+        smoothField(gamma_);
+    }
+
+    if (UpSmoothFlag_ == 1)
+    {
+        smoothField(Ue_);
+    }
 
     forAll(Ue_.internalField(), ceI)
     {

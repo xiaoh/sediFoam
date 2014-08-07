@@ -106,6 +106,9 @@ class enhancedCloud
         scalar particleMoveTime_;
 
         label UfSmoothFlag_;
+        label UpSmoothFlag_;
+        label dragSmoothFlag_;
+        label alphaSmoothFlag_;
 
     // Private Member Functions
 
