@@ -1,0 +1,29 @@
+demFoam is the name of this project combining the LAMMPS and openFoam.
+
+LAMMPS is an open source molecular dynamics code that perform DEM simulations.
+
+OpenFOAM is an open source toolbox for CFD simulations.
+
+The structure of the demFoam is like this:
+
+demFoam
+|
+|----Allwclean.sh
+|----Allwmake.sh
+|----cases/
+|----documentation/
+|----interfaceToLammps/
+|----lammpsFoam/
+|----readme/
+
+Allwclean.sh are Allwmake.sh written to help with the compilation of lammpsFoam, the CFD--DEM solver
+in demFoam project. Allwmake.sh will help you install lammpsFoam while Allclean.sh will uninstall
+lammpsFoam. Note that the source file of LAMMPS is not included in demFoam. We recommend you use
+lammps-1Feb14.
+
+All numerical cases are placed in cases/, with verification cases and validations cases.
+
+Some documents are in documentation/, with a basic user manual (userManual.tex).
+
+interfaceToLammps/ and lammpsFoam/ are folders containing the source code of lammpsFoam. To compile
+lammpsFoam, the files of interfaceToLammps/ should be copied to LAMMPS-(some version)/src.
