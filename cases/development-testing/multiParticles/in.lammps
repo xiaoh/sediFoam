@@ -7,7 +7,8 @@ newton		off
 processors  3 1 1
 
 communicate single vel yes
-read_data 	IC_uniform.in
+# read_data 	IC_uniform.in
+read_data 	IC_uniform_more.in
 
 neighbor	    0.02 bin
 neigh_modify	delay 0
@@ -28,7 +29,7 @@ fix  ywall all wall/gran 4910.0 NULL 0 NULL 0 0 yplane 0.00 0.20
 fix  zwall all wall/gran 4910.0 NULL 0 NULL 0 0 zplane 0.00 0.10
 
 #dump		id all custom 30000 snapshot2.bubblemd tag type x y z vx vy vz
-dump		id all custom 1000 snapshot.bubblemd id type diameter mass x y z vx vy vz
+dump		id all custom 1000 snapshot.bubblemd id diameter type mass x y z vx vy vz
 
 #thermo_style  granular # not work. syntax change?
 thermo_style  one   # granular does not work

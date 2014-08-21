@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 p = [];
 for i in [1,2,3]:
-    cmd = 'grep "^' + str(i) +' 1" snapshot.bubblemd > data/p' + str(i) + '.dat';
+    cmd = 'grep "^' + str(i) +' 0.00" snapshot.bubblemd > data/p' + str(i) + '.dat';
     os.system(cmd);
     x_p = [];
     y_p = [];

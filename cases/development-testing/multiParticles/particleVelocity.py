@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 linestyle = ['k-','ko','b-','bo','r-','ro','g-','go']
 p = [];
 for i in [1,2,3]:
-    cmd = 'grep "^' + str(i) +' 1" snapshot.bubblemd > data/p' + str(i) + '.dat';
+    cmd = 'grep "^' + str(i) +' 0.00" snapshot.bubblemd > data/p' + str(i) + '.dat';
     os.system(cmd);
     t_now = 0;
     timeStep = 0.0002;
