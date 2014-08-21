@@ -271,7 +271,6 @@ void enhancedCloud::calcTcFields()
 
         Asrc_.correctBoundaryConditions();
         Omega_.correctBoundaryConditions();
-        Info<< "Asrc is: " << Asrc_ << endl;
     }
 
 }
