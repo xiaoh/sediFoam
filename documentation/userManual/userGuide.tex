@@ -1,0 +1,185 @@
+% \documentclass[11pt, twocolumn]{article}
+\documentclass[11pt]{article}   
+\usepackage{titlesec}
+\usepackage{algorithm2e}
+\usepackage[usenames]{color}
+\usepackage{lineno}
+
+\setcounter{secnumdepth}{4}
+
+\titleformat{\paragraph}
+{\normalfont\normalsize\bfseries}{\theparagraph}{1em}{}
+\titlespacing*{\paragraph}
+{0pt}{3.25ex plus 1ex minus .2ex}{1.5ex plus .2ex}
+
+\usepackage{inputenc}
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows}
+\usepackage{geometry}                		% See geometry.pdf to learn the
+\usepackage{fixltx2e}
+\geometry{letterpaper}                   		% ... or a4paper or
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{sectsty}
+\usepackage{wrapfig}
+\usepackage{color}
+\usepackage{subfigure}
+\usepackage[font={bf,small},labelsep=colon]{caption}
+\usepackage{authblk}
+\usepackage{booktabs}               % For drawing a table
+\usepackage{listings}               % For drawing a table
+
+%\usepackage[sort&compress, numbers]{natbib}
+
+% \usepackage{times} % Use Times Font (appear like fonts in MS Word)
+%\usepackage{mathptmx}
+
+%\usepackage[parfill]{parskip}    		
+% Activate to begin paragraphs with an empty line rather than an indent 
+
+\usepackage{graphicx}				% Use pdf, png, jpg, or eps§
+\usepackage{caption}
+%\usepackage{subcaption}            % Use of subcaption, do not understand
+\usepackage{hyperref}
+
+
+% \usepackage[none]{hyphenat} % prevent hypenating; not a good idea
+
+\newcommand*{\TitleFont}{%
+       \usefont{\encodingdefault}{\rmdefault}{b}{n}%
+       \fontsize{14}{14}%
+       \selectfont}
+\newcommand\abs[1]{\left|#1\right|} % Defination of absolute value
+
+\geometry{
+  body={6.5in, 9.0in},
+  left=1.0in,
+  top=1.0in
+}
+
+\tikzstyle{decision} = [diamond, draw, fill=blue!20, 
+    text width=4.5em, text badly centered, node distance=3cm, inner sep=0pt]
+\tikzstyle{block} = [rectangle, draw, fill=blue!20, 
+    text width=6em, text centered, rounded corners, minimum height=4em]
+\tikzstyle{line} = [draw, -latex']
+\tikzstyle{cloud} = [draw, ellipse,fill=red!20, node distance=3cm,
+    minimum height=2em]
+
+%\renewcommand{\baselinestretch}{1.25}
+\renewcommand{\baselinestretch}{1}
+%\sectionfont{\normalsize}
+%\subsectionfont{\normalsize}
+
+\title{User guide for CFD--DEM solver lammpsFoam}
+
+\author[1]{Rui Sun\thanks{Email: sunrui@vt.edu}}
+\author[2]{Prachant Gupta}
+\author[1]{Heng Xiao\thanks{Email: hengxiao@vt.edu}}
+\author[2]{Jin Sun}
+
+\affil[1]{Department of Aerospace and Ocean Engineering, Virginia Tech, United States}
+
+\affil[2]{Institute for Infrastructure and Environment, The University of Edinburgh, UK}
+
+\renewcommand\Authands{ and }
+
+\date{}
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+Here is the brief introduction of demFoam, a toolbox of CFD--DEM simulation:
+
+``demFoam'' is the name of this toolbox. 
+
+``lammpsFoam'' is an open source CFD--DEM solver combining the LAMMPS and openFoam.
+
+``LAMMPS'' is an open source molecular dynamics code that perform DEM simulations.
+
+``OpenFOAM'' is an open source toolbox for CFD simulations.
+
+The structure of the demFoam is like this:
+
+\begin{lstlisting}
+    demFoam
+    |----Allwclean.sh
+    |----Allwmake.sh
+    |----cases/
+    |----documentation/
+    |----interfaceToLammps/
+    |----lammpsFoam/
+    |----readme/
+\end{lstlisting}
+
+``Allwclean.sh'' and ``Allwmake.sh'' are written to help with the compilation of lammpsFoam, the
+CFD--DEM solver in demFoam. ``Allwmake.sh'' will help you install lammpsFoam while ``Allclean.sh''
+will uninstall lammpsFoam. Note that the source file of LAMMPS is not included in demFoam. We highly
+recommend you use lammps-1Feb14, a version released on February 2014.
+
+All numerical cases are placed in ``demFoam/cases/'', including verification cases and validations cases.
+
+Some documents are in ``demFoam/documentation/'', with a basic user manual (userManual.tex).
+
+``demFoam/interfaceToLammps/'' and ``demFoam/lammpsFoam/'' are folders containing the source code of
+lammpsFoam. To compile lammpsFoam, the files of ``demFoam/interfaceToLammps/'' should be copied to
+``LAMMPS-(some version)/src''.
+
+\section{How to install lammpsFoam on your linux machine?}
+
+Although Allwmake.sh can automatically help you with the installation of lammpsFoam, it is necessary
+to demonstrate individual steps in the compilation.
+
+\subsection{Environment for lammpsFoam}
+The CFD-DEM solver lammpsFoam would be successfully installed on a machine with OpenFOAM and LAMMPS.
+Here are the steps to compile it on your linux machine:
+\begin{enumerate}
+    \item Install OpenFOAM on your machine, the up-to-date lammpsFoam is supported for OpenFOAM
+        2.1.1.
+    \item Copy all the files in ``InterfaceToLammps'' folder to ``lammps-1Feb14/src", or create a
+        soft link of the files.
+    \item Change to ``lammps-1Feb14/src/STUBS''. Use command ``make''.
+    \item Change to the ``lammps-1Feb14/src'' folder. Use command ``make yes-granular'' to install
+        the granular package of LAMMPS. Add ``kspace'', ``manybody'', ``molecule'', ``fld'' as well
+        in a similar way.
+    \item Go back to the ``lammps-1Feb14/src'' folder. Use command ``make shanghailinux'' to
+        generate an executable file named ``lmp\_shanghailinux'' in this folder. It may take a
+        while.
+    \item Stay at ``lammps-1Feb14/src'' folder. Use command ``make shlib'' to generate a new
+        ``Makefile.shlib'' file.
+    \item Stay at ``lammps-1Feb14/src'' folder. Use command ``make -f Makefile.shlib shanghailinux''
+        to compile LAMMPS to a dynamic library. After this step, you will see a file named
+        ``liblammps\_shanghailinux.so".
+    \item Change to ``\$FOAM\_USER\_LIBBIN'' and make a soft link of ``liblammps\_shanghailinux.so"
+        in this folder. ``liblammps\_shanghailinux.so'' is the file generated in the previous step.
+    \item Change to ``LammpsFoam'' folder. Use command ``wmake libso dragModels'' to compile the
+        drag models. Use command ``wmake libso chPressureGrad'' to compile the pressure gradient for
+        channel flow.
+    \item Stay at the same directory. Use command ``wmake'' to compile lammpsFoam.
+\end{enumerate}
+
+To check if your lammpsFoam is succesfully compiled, you can:
+\begin{enumerate}
+    \item Change to the ``cases/auto-testing/test-cases/xiaocase3/'' folder. 
+    \item Execute ``./Allrun.sh'' in the command line to see the result.
+\end{enumerate}
+
+\section{Cases and supporting publications}
+
+There are lot of publications using
+lammpsFoam~\cite{sun09,xiao-cicp,gupta11a,gupta11b,gupta11b,gxs11a,gupta13a,gupta12,part1,part2}:
+
+Several cases from the publications are added in ``demfoam/cases/auto-testing/test-cases'':
+\begin{enumerate}
+    \item ``xiaocase1'' is the 1st case in H. Xiao et al.'s paper~\cite{xiao-cicp}.
+    \item ``xiaocase3'' is the 3rd case in H. Xiao et al.'s paper~\cite{xiao-cicp}.
+    \item ``expMuller09'' is the case in R. Sun et al.'s paper~\cite{part1,part2}.
+\end{enumerate}
+
+
+\bibliographystyle{unsrt}
+\bibliography{userGuide}
+
+\end{document}
+

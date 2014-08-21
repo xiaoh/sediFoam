@@ -72,5 +72,6 @@ else
 fi
 
 wmake libso dragModels
+wmake libso chPressureGrad
 wmake 
 
