@@ -13,6 +13,7 @@ EXE_INC = \
     -I$(LIB_SRC)/cfdTools/general/lnInclude \
     -I$(LIB_SRC)/finiteVolume/lnInclude     \
     -I$(LIB_SRC)/triSurface/lnInclude     \
+    -IchPressureGrad/lnInclude \
     -IdragModels/lnInclude
 
 EXE_LIBS = \
@@ -26,4 +27,5 @@ EXE_LIBS = \
     -L/usr/lib64/openmpi/lib/ -lmpi -lmpi_cxx\
     -llammps_shanghailinux \
     -ltriSurface \
+    -lchPressureGrad-DEM \
     -lstdc++

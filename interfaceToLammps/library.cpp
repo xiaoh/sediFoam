@@ -193,7 +193,7 @@ int lammps_get_local_n(void* ptr)
 
   int nlocal = lammps->atom->nlocal;
 
-  printf("++++=A> nlocal is: %5d\n", nlocal);
+  // printf("++++=A> nlocal is: %5d\n", nlocal);
 
   return nlocal;
 }

@@ -157,11 +157,11 @@ void softParticleCloud::initLammps()
     );
 
 
-    Pout << "before moving..." << endl;
+    // Pout << "before moving..." << endl;
 
     softParticle::trackingData td0(*this);
     Cloud<softParticle>::move(td0, mesh_.time().deltaTValue());
-    Pout << "finished moving..." << endl;
+    // Pout << "finished moving..." << endl;
 
 
     lammps_step(lmp_, 0);
@@ -457,8 +457,8 @@ void softParticleCloud::setPositionVeloCpuId
         p.pLmpCpuId() = lmpCpuIdLocal[i];
         nLocal_++;
     }
-    Pout<< " After movement, I have " << nLocal_
-        << " particles locally." << endl;
+    // Pout<< " After movement, I have " << nLocal_
+    //     << " particles locally." << endl;
 }
 
 //- Set the particle cell index after the particle
@@ -650,7 +650,7 @@ void  softParticleCloud::lammpsEvolveForward
 
     if (contiguous<vector>())
     {
-        Pout<< "contiguous vector is true." << endl;
+        // Pout<< "contiguous vector is true." << endl;
         double* toLmpFLocalArray_ = 
             reinterpret_cast <double *> (&(toLmpDragList.first()));
 
@@ -675,7 +675,7 @@ void  softParticleCloud::lammpsEvolveForward
         int* toLmpFoamCpuIdLocalArray_ = new int [toLmpListSize];
         int* toLmpTagLocalArray_ = new int [toLmpListSize];
 
-        Pout<< "contiguous vector is false." << endl;
+        // Pout<< "contiguous vector is false." << endl;
         for(label i = 0; i < toLmpListSize; i++)
         {
             toLmpFLocalArray_[3*i + 0] = toLmpDragList[i].x();
