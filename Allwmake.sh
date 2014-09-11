@@ -71,6 +71,7 @@ else
     echo "Please contact the developer (sunrui@vt.edu) for help."
 fi
 
+wmake libso chPressureGrad
 wmake libso dragModels
 wmake 
 

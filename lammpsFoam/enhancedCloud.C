@@ -271,7 +271,7 @@ void enhancedCloud::calcTcFields()
 
         Asrc_.correctBoundaryConditions();
         Omega_.correctBoundaryConditions();
-        Info<< "Asrc is: " << Asrc_ << endl;
+        // Info<< "Asrc is: " << Asrc_ << endl;
     }
 
 }
@@ -502,7 +502,7 @@ void enhancedCloud::evolve()
         // (Harvest XLocal & VLocal)  Lammps --> Cloud
         setPositionVeloCpuId(XLocal, VLocal, lmpCpuIdLocal);
 
-        Pout<< "Particle number before moving: " << size() << endl;
+        // Pout<< "Particle number before moving: " << size() << endl;
 
         diffusionRunTime_.cpuTimeIncrement();
         // move particle to the new position
@@ -510,15 +510,15 @@ void enhancedCloud::evolve()
 
         particleMoveTime_ += diffusionRunTime_.cpuTimeIncrement();
 
-        Pout<< "Particle number after moving: " << size() << endl;
+        // Pout<< "Particle number after moving: " << size() << endl;
 
         if (particleCount_ != size())
         {
-            Pout<< "Warning: enhancedCloud::evolve: "
-                << "particle number modified! "
-                << "Particle number before: " << particleCount_
-                << "Particle number now: " << size()
-                << endl;
+            // Pout<< "Warning: enhancedCloud::evolve: "
+            //     << "particle number modified! "
+            //     << "Particle number before: " << particleCount_
+            //     << "Particle number now: " << size()
+            //     << endl;
 
             particleCount_ = size();
         }
@@ -537,8 +537,8 @@ void enhancedCloud::evolve()
         delete [] lmpCpuIdLocal;
     }
 
-    Pout<< "After this cycle, "
-        << size() << " local particles has been moved. " << endl;
+    // Pout<< "After this cycle, "
+    //     << size() << " local particles has been moved. " << endl;
 }
 
 

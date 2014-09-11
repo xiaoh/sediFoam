@@ -68,7 +68,7 @@ void softParticle::calculateDerived()
 {
     mass_=  density_*4./3.*constant::mathematical::pi*d_*d_*d_/8.;
     positionOld_ = position_;
-    Pout<< "creating a softParticle." << endl;
+    // Pout<< "creating a softParticle." << endl;
     if (debug)
     {
         Pout<< "tag is: " << tag_ << endl;
@@ -179,14 +179,14 @@ void Foam::softParticle::transformProperties (const tensor& T)
 {
     particle::transformProperties(T);
     moveU_ = transform(T, moveU_);
-    Pout<< "hitting cyclic patch T" << endl;
+    // Pout<< "hitting cyclic patch T" << endl;
 }
 
 
 void Foam::softParticle::transformProperties(const vector& separation)
 {
     particle::transformProperties(separation);
-    Pout<< "hitting cyclic patch separation" << endl;
+    // Pout<< "hitting cyclic patch separation" << endl;
 }
 
 
