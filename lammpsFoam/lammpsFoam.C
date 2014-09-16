@@ -33,6 +33,8 @@ Description
 \*---------------------------------------------------------------------------*/
 
 #include "fvCFD.H"
+#include "singlePhaseTransportModel.H"
+#include "PhaseIncompressibleTurbulenceModel.H"
 #include "nearWallDist.H"
 #include "wallFvPatch.H"
 #include "Switch.H"
@@ -73,6 +75,8 @@ int main(int argc, char *argv[])
         runTime++;
         Info<< "Time = " << runTime.timeName() << nl << endl;
 
+        continuousPhaseTransport.correct();
+
         #include "readPISO.H"
         #include "CourantNo.H"
 
@@ -80,9 +84,10 @@ int main(int argc, char *argv[])
 
         #include "UEqns.H"
 
-
         // --- PISO loop
         #include "pEqn.H"
+
+        continuousPhaseTurbulence->correct();
 
         #include "DDtU.H"
         #include "kEpsilon.H"

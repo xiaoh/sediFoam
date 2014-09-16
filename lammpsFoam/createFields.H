@@ -237,3 +237,22 @@
     label pRefCell = 0;
     scalar pRefValue = 0.0;
     setRefCell(p, mesh.solutionDict().subDict("PISO"), pRefCell, pRefValue);
+
+    // Adding the continuous phase information
+    singlePhaseTransportModel continuousPhaseTransport(Ub, phib);
+
+    surfaceScalarField betaf("betaf", fvc::interpolate(beta));
+
+    surfaceScalarField betaPhib("betaPhib", betaf*phib);
+    autoPtr<PhaseIncompressibleTurbulenceModel<singlePhaseTransportModel> >
+    continuousPhaseTurbulence
+    (
+        PhaseIncompressibleTurbulenceModel<singlePhaseTransportModel>::New
+        (
+            beta,
+            Ub,
+            betaPhib,
+            phib,
+            continuousPhaseTransport
+        )
+    );

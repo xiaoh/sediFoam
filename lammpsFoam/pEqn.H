@@ -40,17 +40,10 @@ for (int corr = 0; corr < nCorr; corr++)
       //  + fvc::ddtPhiCorr(rUaA, Ua, phia)
       //  + phiDraga;
 
-    #ifdef darwin
     phib =
         (fvc::interpolate(Ub) & mesh.Sf())
       + rUbAf*fvc::ddtCorr(Ub, phib)
       + phiDragb;
-    #else
-    phib =
-        (fvc::interpolate(Ub) & mesh.Sf())
-      + fvc::ddtPhiCorr(rUbA, Ub, phib)
-      + phiDragb;
-    #endif
 
     phi = alphaf*phia + betaf*phib;
 
