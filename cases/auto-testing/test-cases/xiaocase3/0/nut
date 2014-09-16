@@ -16,45 +16,40 @@ FoamFile
     instance        "";
     local           "";
 
-    class           dictionary;
-    object          turbulenceProperties;
+    class           volScalarField;
+    object          nut;
 }
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-turbulenceModel laminar;
 
-turbulence      off;
+dimensions      [0 2 -1 0 0 0 0];
 
-laminarCoeffs
+internalField   uniform 0.0;
+
+boundaryField
 {
-}
-
-kEpsilonCoeffs
-{
-    Cmu             Cmu [0 0 0 0 0 0 0] 0.09;
-    C1              C1 [0 0 0 0 0 0 0] 1.44;
-    C2              C2 [0 0 0 0 0 0 0] 1.92;
-    alphak          alphak [0 0 0 0 0 0 0] 1;
-    alphaEps        alphaEps [0 0 0 0 0 0 0] 0.76923;
-}
-
-wallFunctionCoeffs
-{
-    kappa           kappa [0 0 0 0 0 0 0] 0.4187;
-    E               E [0 0 0 0 0 0 0] 9;
-}
-
-simulationType  LES;
-LES
-{
-    LESModel    Smagorinsky;
-    turbulence  on;
-    printCoeffs on;
-    delta       cubeRootVol;
-
-    cubeRootVolCoeffs
+    inlet           
     {
+        type            calculated;
+        value           uniform 0.0;
+    }
+
+    outlet          
+    {
+        type            calculated;
+        value           uniform 0.0;
+    }
+
+    walls           
+    {
+        type            calculated;
+        value           uniform 0.0;
+    }
+
+    defaultFaces    
+    {
+        type            empty;
     }
 }
 

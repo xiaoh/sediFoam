@@ -40,5 +40,13 @@ Cl              Cl [0 0 0 0 0 0 0] 0; // lift coefficient (taken as zero)
 
 Ct              Ct [0 0 0 0 0 0 0] 1; // some coefficient used in the turbulence (defined but not used)
 
+continousPhaseName  water;
+
+rho.water           1;
+
+transportModel      Newtonian;
+
+nu                  1e-6;
+
 
 // ************************************************************************* //

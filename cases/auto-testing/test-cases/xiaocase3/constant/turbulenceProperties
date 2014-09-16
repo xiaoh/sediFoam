@@ -45,5 +45,18 @@ wallFunctionCoeffs
     E               E [0 0 0 0 0 0 0] 9;
 }
 
+simulationType  LES;
+LES
+{
+    LESModel    Smagorinsky;
+    turbulence  on;
+    printCoeffs on;
+    delta       cubeRootVol;
+
+    cubeRootVolCoeffs
+    {
+    }
+}
+
 
 // ************************************************************************* //

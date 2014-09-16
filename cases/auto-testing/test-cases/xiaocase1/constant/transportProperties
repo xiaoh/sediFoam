@@ -40,5 +40,12 @@ Cl              Cl [0 0 0 0 0 0 0] 0;
 
 Ct              Ct [0 0 0 0 0 0 0] 1;
 
+continuoutPhaseName gas;
+
+rho.water           1.2;
+
+transportModel      Newtonian;
+
+nu                  1.8e-5;
 
 // ************************************************************************* //

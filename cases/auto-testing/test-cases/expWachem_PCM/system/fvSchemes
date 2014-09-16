@@ -24,7 +24,7 @@ FoamFile
 
 ddtSchemes
 {
-    default     backward;
+    default Euler;
 }
 
 gradSchemes
@@ -42,6 +42,7 @@ divSchemes
     div(phi,alpha)  Gauss limitedLinear01 1;
     div((-nuEffa*grad(Ua).T())) Gauss linear;
     div((-nuEffb*grad(Ub).T())) Gauss linear;
+    div(((beta*nuEff)*dev2(T(grad(Ub))))) Gauss linear;
 }
 
 laplacianSchemes
@@ -51,7 +52,9 @@ laplacianSchemes
     laplacian(nuEffb,Ub) Gauss linear corrected;
     laplacian((rho*(1|A(U))),p) Gauss linear corrected;
     laplacian(1,alpha) Gauss linear corrected;
-    laplacian(DT,tempDiffu) Gauss linear corrected;
+    laplacian(DT,tempDiffScalar) Gauss linear corrected;
+    laplacian(DT,tempDiffVector) Gauss linear corrected;
+    laplacian((beta*nuEff),Ub) Gauss linear corrected;
 }
 
 interpolationSchemes
