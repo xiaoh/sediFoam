@@ -1,4 +1,4 @@
-volScalarField rUbA = 1.0/UbEqn.A();
+volScalarField rUbA = 1.0/UbEqn.A()*beta;
 
 for (int corr = 0; corr < nCorr; corr++)
 {
@@ -7,13 +7,13 @@ for (int corr = 0; corr < nCorr; corr++)
 
     // volScalarField rUaA = 1.0/UaEqn.A();
 
-    rUbA = 1.0/UbEqn.A();
+    // rUbA = 1.0/UbEqn.A()*beta;
 
     // surfaceScalarField rUaAf = fvc::interpolate(rUaA);
     surfaceScalarField rUbAf = fvc::interpolate(rUbA);
 
     // Ua = rUaA*UaEqn.H();
-    Ub = rUbA*UbEqn.H();
+    Ub = rUbA*UbEqn.H()/beta;
 
     // surfaceScalarField phiDraga =
     //    fvc::interpolate(beta/rhoa*dragCoef*rUaA)*phib

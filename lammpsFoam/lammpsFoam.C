@@ -75,6 +75,8 @@ int main(int argc, char *argv[])
         runTime++;
         Info<< "Time = " << runTime.timeName() << nl << endl;
 
+        // Correct the kinetic viscosity
+        // not applicable in Newtonian flow
         continuousPhaseTransport.correct();
 
         #include "readPISO.H"
@@ -87,6 +89,7 @@ int main(int argc, char *argv[])
         // --- PISO loop
         #include "pEqn.H"
 
+        // update the turbulence viscosity
         continuousPhaseTurbulence->correct();
 
         #include "DDtU.H"
