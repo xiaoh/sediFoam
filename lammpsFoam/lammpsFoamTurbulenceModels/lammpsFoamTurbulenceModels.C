@@ -55,6 +55,9 @@ makeRASModel(kEpsilon);
 #include "Smagorinsky.H"
 makeLESModel(Smagorinsky);
 
+#include "mySmagorinsky.H"
+makeLESModel(mySmagorinsky);
+
 #include "kEqn.H"
 makeLESModel(kEqn);
 

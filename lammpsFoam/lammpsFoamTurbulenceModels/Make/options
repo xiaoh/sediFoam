@@ -1,4 +1,5 @@
 EXE_INC = \
+    -I$LES/ \
     -I$(LIB_SRC)/foam/lnInclude \
     -I$(LIB_SRC)/finiteVolume/lnInclude \
     -I$(LIB_SRC)/thermophysicalModels/basic/lnInclude \
