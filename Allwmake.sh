@@ -39,6 +39,7 @@ make yes-KSPACE
 make yes-MANYBODY
 make yes-MOLECULE
 make yes-FLD
+make yes-RIGID
 
 version=`uname`
 # Use different options according to different versions
@@ -73,5 +74,6 @@ fi
 
 wmake libso dragModels
 wmake libso chPressureGrad
+wmake libso lammpsFoamTurbulenceModels
 wmake 
 
