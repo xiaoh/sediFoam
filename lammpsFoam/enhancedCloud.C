@@ -25,6 +25,8 @@ License
 \*----------------------------------------------------------------------------*/
 
 #include "enhancedCloud.H"
+// #define DEBUG_FORCE
+
 
 namespace Foam
 {
@@ -64,7 +66,7 @@ void  enhancedCloud::updateParticleAlpha()
     {
         softParticle& p = pIter();
         label cellI = p.cell();
-        if (cellI<0) 
+        if (cellI<0)
         {
             Info << "cell not found!" << endl;
             continue;
@@ -146,10 +148,65 @@ void  enhancedCloud::updateDragOnParticles()
         }
 
         // local pressure gradient is used though (no weighting).
-        pDrag_[particleI] =
-            Jd_[particleI]*(1.0 - pAlpha_[particleI])
-           *p.Vol()*Uri_[particleI]         // Drag
-          - gradp[p.cell()]*p.Vol();        // Buoyancy
+        pDrag_[particleI] = vector::zero;
+
+        if (particleDragFlag_ == 1)
+        {
+            pDrag_[particleI] +=
+                Jd_[particleI]*(1.0 - pAlpha_[particleI])
+               *p.Vol()*Uri_[particleI];        // Drag
+        }
+        if (particlePressureGradFlag_ == 1)
+        {
+            pDrag_[particleI] +=
+              - gradp[p.cell()]*p.Vol();        // Buoyancy
+        }
+        // Added mass force
+        if (particleAddedMassFlag_ == 1)
+        {
+            vector dupdt = (p.U()-p.UOld())/runTime().deltaT().value();
+            pDrag_[particleI] += 0.5*rhob_*p.Vol()*(DDtUf_[p.cell()]-dupdt);
+            Info<< "dupdt is: " << dupdt << endl;
+            Info<< "mass is: " << rhob_*p.Vol() << endl;
+        }
+        if (particleLiftForceFlag_ == 1)
+        {
+        //    unfinished
+        }
+        if (particleHistoryForceFlag_ == 1)
+        {
+        //    unfinished
+        }
+        if (lubricationFlag_ == 1)
+        {
+            scalar distMin = 0.0001*p.d();
+            scalar distMax = 0.1*p.d();
+            scalar distWall = p.position().y() - 0.5*p.d();
+            scalar pVel = p.U().y();
+            if (distWall < distMax && distWall > distMin)
+            {
+                vector normalVec = vector(0,1,0);
+                pDrag_[particleI] += 
+                    6*3.1416*nub_*rhob_*(-pVel)/distWall*(p.d()*p.d())/4.0*normalVec;
+#ifdef DEBUG_FORCE
+                Info<< "lubrication is: "
+                    << 6*3.1416*nub_*rhob_*(-pVel)/distWall*(p.d()*p.d())/4.0*normalVec
+                    << endl;
+#endif
+            }
+        }
+
+#ifdef DEBUG_FORCE
+        Info<< "drag is: "
+            << Jd_[particleI]*(1.0 - pAlpha_[particleI])
+              *p.Vol()*Uri_[particleI] << endl;
+        Info<< "pressure gradient force is: "
+            << - gradp[p.cell()]*p.Vol() << endl;
+        Info<< "added mass is: "
+            << - 0.5*rhob_*p.Vol()*(p.U()-p.UOld())/runTime().deltaT().value()
+            << endl;
+        Info<< "total force is: " << pDrag_[particleI] << endl;
+#endif
     }
 }
 
@@ -234,7 +291,7 @@ void enhancedCloud::calcTcFields()
 
         forAll(Asrc_.internalField(), ceI)
         {
-            Ftotal1 += 
+            Ftotal1 +=
                 Asrc_.internalField()[ceI]*mesh_.V()[ceI]*(1 - gamma_.internalField()[ceI]);
         }
 
@@ -259,7 +316,7 @@ void enhancedCloud::calcTcFields()
 
         forAll(Asrc_.internalField(), ceI)
         {
-            Ftotal2 += 
+            Ftotal2 +=
                 Asrc_.internalField()[ceI]*mesh_.V()[ceI]*(1 - gamma_.internalField()[ceI]);
         }
 
@@ -285,6 +342,7 @@ enhancedCloud::enhancedCloud
     const volScalarField& p,
     volVectorField& Ue,
     const volVectorField& Uf,
+    const volVectorField& DDtUf,
     dimensionedScalar nu,
     volScalarField& alpha,
     IOdictionary& cloudDict,
@@ -296,6 +354,7 @@ enhancedCloud::enhancedCloud
     softParticleCloud(U, p, Ue, nu, alpha, cloudDict),
     mesh_(U.mesh()),
     Uf_(Uf),
+    DDtUf_(DDtUf),
     UfSmoothed_(Uf),
     Omega_
     (
@@ -352,13 +411,14 @@ enhancedCloud::enhancedCloud
     ),
     simple_(diffusionMesh_),
     diffusionTimeCount_(2, 0.0),
-    particleMoveTime_(0.0),
-    UfSmoothFlag_(0),
-    UpSmoothFlag_(0),
-    dragSmoothFlag_(0),
-    alphaSmoothFlag_(0)
+    particleMoveTime_(0.0)
 {
     drag_ = Foam::dragModel::New(cloudDict, transDict, pAlpha_, pDia_);
+    dimensionedScalar rhob(transDict.lookup("rhob"));
+    rhob_ = rhob.value();
+
+    dimensionedScalar nub(transDict.lookup("nub"));
+    nub_ = nub.value();
 
     particleCount_ = size();
 
@@ -373,46 +433,41 @@ enhancedCloud::enhancedCloud
             p.Vol();
     }
 
-    surfaceScalarField phi
-    (
-        IOobject
-        (
-            "phi",
-            runTime().timeName(),
-            mesh_,
-            IOobject::NO_READ,
-            IOobject::AUTO_WRITE
-        ),
-        vector(1,1,1) & mesh_.Sf()
-    );
-
-    scalarField sumPhi
-    (
-        fvc::surfaceSum(mag(phi))().internalField()
-    );
-
-    scalar courantTimeStep =
-        1/(0.5*pow(gMax(sumPhi/mesh_.V().field()),2));
-
-    Info<< "Best time step is: " << courantTimeStep << endl;
-
+    // determine the time and time step in diffusion procedure
     scalar diffusionTime = pow(diffusionBandWidth,2)/4;
+    scalar diffusionDeltaT = diffusionTime/(diffusionSteps + SMALL);
 
-    scalar diffusionDeltaT = courantTimeStep;
-    scalar nDiffusionTimeStep = ceil(diffusionTime/diffusionDeltaT);
-    Info<< "explicit DiffusionTimeStep is: " << nDiffusionTimeStep << endl;
-    Info<< "implicit DiffusionTimeStep is: " << diffusionSteps << endl;
-
-    diffusionDeltaT = diffusionTime/(diffusionSteps + SMALL);
     diffusionRunTime_.setEndTime(diffusionTime);
     diffusionRunTime_.setDeltaT(diffusionDeltaT);
-    Info<< "diffusion time is: " << diffusionTime << endl;
-    Info<< "diffusion time step is: " << diffusionDeltaT << endl;
+    Info << "diffusion time is: " << diffusionTime << endl;
+    Info << "diffusion time step is: " << diffusionDeltaT << endl;
 
+    // determine the fields to diffuse
     UfSmoothFlag_ = cloudProperties_.lookupOrDefault("UfSmooth",1);
     UpSmoothFlag_ = cloudProperties_.lookupOrDefault("UpSmooth",1);
     dragSmoothFlag_ = cloudProperties_.lookupOrDefault("dragSmooth",1);
     alphaSmoothFlag_ = cloudProperties_.lookupOrDefault("alphaSmooth",1);
+
+    // determine the forces to add
+    particleDragFlag_ = cloudProperties_.lookupOrDefault("particleDrag",1);
+    particlePressureGradFlag_ =
+        cloudProperties_.lookupOrDefault("particlePressureGrad",1);
+    particleAddedMassFlag_ =
+        cloudProperties_.lookupOrDefault("particleAddedMass",0);
+    particleLiftForceFlag_ =
+        cloudProperties_.lookupOrDefault("particleLift",0);
+    particleHistoryForceFlag_ =
+        cloudProperties_.lookupOrDefault("particleHistoryForce",0);
+    lubricationFlag_ =
+        cloudProperties_.lookupOrDefault("lubricationForce",0);
+
+    Info<< particleDragFlag_
+        << particlePressureGradFlag_
+        << particleAddedMassFlag_
+        << particleLiftForceFlag_
+        << particleHistoryForceFlag_
+        << lubricationFlag_
+        << endl;
 
     // initial quantities for dragModel
     pDia_.setSize(particleCount_);
@@ -495,13 +550,20 @@ void enhancedCloud::evolve()
 
         // XLocal & VLocal are work spaces for "lammpsEvolveForward"
         // newly obtianed values are put there
-        lammpsEvolveForward(XLocal, VLocal, lmpCpuIdLocal, pDrag_, nstep);
+        lammpsEvolveForward
+        (
+            XLocal,
+            VLocal,
+            lmpCpuIdLocal,
+            pDrag_,
+            nstep
+        );
 
         // update position/velocity of all particles in this cloud.
         // (Harvest XLocal & VLocal)  Lammps --> Cloud
         setPositionVeloCpuId(XLocal, VLocal, lmpCpuIdLocal);
 
-        // Pout<< "Particle number before moving: " << size() << endl;
+        Pout<< "Particle number before moving: " << size() << endl;
 
         diffusionRunTime_.cpuTimeIncrement();
         // move particle to the new position
@@ -509,7 +571,7 @@ void enhancedCloud::evolve()
 
         particleMoveTime_ += diffusionRunTime_.cpuTimeIncrement();
 
-        // Pout<< "Particle number after moving: " << size() << endl;
+        Pout<< "Particle number after moving: " << size() << endl;
 
         if (particleCount_ != size())
         {

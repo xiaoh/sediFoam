@@ -66,6 +66,9 @@ class enhancedCloud
         //- Fluid velocity
         const volVectorField& Uf_;
 
+        //- Fluid material derivative
+        const volVectorField& DDtUf_;
+
         //- Smoothed fluid velocity
         volVectorField UfSmoothed_;
 
@@ -96,7 +99,8 @@ class enhancedCloud
         volVectorField Asrc_;
 
         //- Fluid density
-        // scalar rhob_;
+        scalar rhob_;
+        scalar nub_;
 
         Time diffusionRunTime_;
         fvMesh diffusionMesh_;
@@ -105,10 +109,19 @@ class enhancedCloud
         scalarList diffusionTimeCount_;
         scalar particleMoveTime_;
 
+        //- Whether to turn on the diffusion or not
         label UfSmoothFlag_;
         label UpSmoothFlag_;
         label dragSmoothFlag_;
         label alphaSmoothFlag_;
+
+        //- Whether to turn on the force to the particles
+        label particleDragFlag_;
+        label particlePressureGradFlag_;
+        label particleAddedMassFlag_;
+        label particleLiftForceFlag_;
+        label particleHistoryForceFlag_;
+        label lubricationFlag_;
 
     // Private Member Functions
 
@@ -153,6 +166,7 @@ public:
              const volScalarField& p,
              volVectorField& Ue,
              const volVectorField& Uf,
+             const volVectorField& DDtUf,
              dimensionedScalar nu,
              volScalarField& alpha,
              IOdictionary& cloudDict,

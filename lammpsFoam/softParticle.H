@@ -82,6 +82,10 @@ class softParticle
         //  Used to predict moveU_.
         vector positionOld_;
 
+        //- Velocity of the particle in the previous time step.
+        //  Used to calculate the acceleration and compute added mass force.
+        vector UOld_;
+
         //- Particle ID used in LAMMPS to distinguish different particles.
         //  Used as a global particle ID.
         label tag_;
@@ -231,6 +235,12 @@ public:
             vector& positionOld()
             {
                 return positionOld_;
+            }
+
+            //- Return velocity in the previous time step
+            vector& UOld()
+            {
+                return UOld_;
             }
 
             //- Return global ID

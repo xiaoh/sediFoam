@@ -10,6 +10,7 @@ enhancedCloud cloud
     p,
     Ua,
     Ub,
+    DDtUb,
     nub,
     alpha,
     cloudProperties,
