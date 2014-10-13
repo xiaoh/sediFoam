@@ -1,6 +1,9 @@
 // fvVectorMatrix UaEqn(Ua, Ua.dimensions()*dimVol/dimTime);
 fvVectorMatrix UbEqn(Ub, Ub.dimensions()*dimVol/dimTime);
 
+betaf = fvc::interpolate(beta);
+betaPhib = betaf*phib;
+
 {
     UbEqn =
     (
