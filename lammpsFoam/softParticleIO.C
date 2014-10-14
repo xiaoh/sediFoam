@@ -44,6 +44,7 @@ Foam::softParticle::softParticle
     moveU_(vector::zero),
     ensembleU_(vector::zero),
     positionOld_(vector::zero),
+    UOld_(vector::zero),
     tag_(0),
     lmpCpuId_(0),
     type_(0),
@@ -69,8 +70,8 @@ Foam::softParticle::softParticle
             is.read
             (
                reinterpret_cast<char*>(&d_),
-               sizeof(mass_) + sizeof(d_)  + sizeof(positionOld_) + sizeof(U_)
-             + sizeof(moveU_) + sizeof(ensembleU_) + sizeof(type_)
+               sizeof(mass_) + sizeof(d_)  + sizeof(positionOld_) + sizeof(UOld_) 
+             + sizeof(U_) + sizeof(moveU_) + sizeof(ensembleU_) + sizeof(type_)
              + sizeof(density_) + sizeof(tag_)  + sizeof(lmpCpuId_)
             );
           }
@@ -91,6 +92,7 @@ Foam::softParticle::softParticle
         Pout<< "density is: " << density_ << endl;
         Pout<< "mass is: " << mass_ << endl;
         Pout<< "positionOld is: " << positionOld_ << endl;
+        Pout<< "UOld is: " << UOld_ << endl;
         Pout<< "position is: " << position() << endl;
     }
 
@@ -209,6 +211,12 @@ void softParticle::writeFields(const Cloud<softParticle>& c, const label np)
         np
     );
 
+    IOField<vector> UOld
+    (
+        c.fieldIOobject("UOld", IOobject::NO_READ),
+        np
+    );
+
     IOField<label> origProc
     (
         c.fieldIOobject("origProcId", IOobject::NO_READ),
@@ -233,6 +241,7 @@ void softParticle::writeFields(const Cloud<softParticle>& c, const label np)
         U[i] = p.U_;
         ensembleU[i] = p.ensembleU_;
         positionsOld[i] = p.positionOld_;
+        UOld[i] = p.UOld_;
 
         origProc[i] = p.origProc();
         origId[i] = p.origId();
@@ -268,7 +277,8 @@ Foam::Ostream& Foam::operator<<(Ostream& os, const softParticle& p)
             << token::SPACE << p.ensembleU_
             << token::SPACE << p.mass_
             << token::SPACE << p.density_
-            << token::SPACE << p.positionOld_;
+            << token::SPACE << p.positionOld_
+            << token::SPACE << p.UOld_;
     }
     else
     {
@@ -278,7 +288,7 @@ Foam::Ostream& Foam::operator<<(Ostream& os, const softParticle& p)
             reinterpret_cast<const char*>(&p.d_),
             sizeof(p.d_) + sizeof(p.tag_) + sizeof(p.lmpCpuId_) + sizeof(p.type_) + sizeof(p.U_)
           + sizeof(p.moveU_) + sizeof(p.ensembleU_) + sizeof(p.mass_)
-          + sizeof(p.density_) + sizeof(p.positionOld_)
+          + sizeof(p.density_) + sizeof(p.positionOld_) + sizeof(p.UOld_)
         );
     }
 

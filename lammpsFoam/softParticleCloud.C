@@ -452,6 +452,7 @@ void softParticleCloud::setPositionVeloCpuId
         p.moveU() = (XLocal[i] - p.position())/mesh_.time().deltaTValue();
 
         // Update velocity:
+        p.UOld() = p.U();
         p.U() = VLocal[i];
 
         p.pLmpCpuId() = lmpCpuIdLocal[i];

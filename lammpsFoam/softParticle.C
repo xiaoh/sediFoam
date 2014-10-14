@@ -55,6 +55,7 @@ softParticle::softParticle
     moveU_(vector::zero),
     ensembleU_(vector::zero),
     positionOld_(vector::zero),
+    UOld_(vector::zero),
     tag_(tag),
     lmpCpuId_(lmpCpuId),
     type_(type),
@@ -68,6 +69,7 @@ void softParticle::calculateDerived()
 {
     mass_=  density_*4./3.*constant::mathematical::pi*d_*d_*d_/8.;
     positionOld_ = position_;
+    UOld_ = U_;
     // Pout<< "creating a softParticle." << endl;
     if (debug)
     {
@@ -78,6 +80,7 @@ void softParticle::calculateDerived()
         Pout<< "density is: " << density_ << endl;
         Pout<< "mass is: " << mass_ << endl;
         Pout<< "positionOld is: " << positionOld_ << endl;
+        Pout<< "UOld is: " << UOld_ << endl;
     }
 }
 
