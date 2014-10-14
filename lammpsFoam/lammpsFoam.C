@@ -93,7 +93,6 @@ int main(int argc, char *argv[])
         continuousPhaseTurbulence->correct();
 
         #include "DDtU.H"
-        #include "kEpsilon.H"
 
         splitTime[0] += runTime.elapsedCpuTime() - t0;
         t0 = runTime.elapsedCpuTime();

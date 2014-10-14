@@ -211,8 +211,6 @@
     );
 
 
-#   include "createTurbulence.H"
-
     Info<< "Calculating field DDtUa and DDtUb\n" << endl;
 
     volVectorField DDtUa =
@@ -241,18 +239,5 @@
     // Adding the continuous phase information
     singlePhaseTransportModel continuousPhaseTransport(Ub, phib);
 
-    surfaceScalarField betaf("betaf", fvc::interpolate(beta));
+#   include "createTurbulence.H"
 
-    surfaceScalarField betaPhib("betaPhib", betaf*phib);
-    autoPtr<PhaseIncompressibleTurbulenceModel<singlePhaseTransportModel> >
-    continuousPhaseTurbulence
-    (
-        PhaseIncompressibleTurbulenceModel<singlePhaseTransportModel>::New
-        (
-            beta,
-            Ub,
-            betaPhib,
-            phib,
-            continuousPhaseTransport
-        )
-    );
