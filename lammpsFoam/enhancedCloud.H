@@ -115,6 +115,8 @@ class enhancedCloud
         label dragSmoothFlag_;
         label alphaSmoothFlag_;
 
+        tensor smoothDirection_;;
+
         //- Whether to turn on the force to the particles
         label particleDragFlag_;
         label particlePressureGradFlag_;

@@ -448,6 +448,13 @@ enhancedCloud::enhancedCloud
     dragSmoothFlag_ = cloudProperties_.lookupOrDefault("dragSmooth",1);
     alphaSmoothFlag_ = cloudProperties_.lookupOrDefault("alphaSmooth",1);
 
+    smoothDirection_ = 
+        cloudProperties_.lookupOrDefault
+        (
+            "smoothDirection",
+            tensor(1.0,0,0,0,1.0,0,0,0,1.0)
+        );
+
     // determine the forces to add
     particleDragFlag_ = cloudProperties_.lookupOrDefault("particleDrag",1);
     particlePressureGradFlag_ =
@@ -628,7 +635,7 @@ void enhancedCloud::smoothField(volScalarField& sFieldIn)
 
     diffWorkField.internalField() = sFieldIn.internalField();
 
-    dimensionedScalar DT("DT", dimensionSet(0, 2, -1, 0, 0), 1.0);
+    dimensionedTensor DT("DT", dimensionSet(0, 2, -1, 0, 0), smoothDirection_);
 
     scalar startTime = diffusionRunTime_.startTimeIndex();
     label startIndex = diffusionRunTime_.timeIndex();
@@ -681,7 +688,7 @@ void enhancedCloud::smoothField(volVectorField& sFieldIn)
 
     diffWorkField.internalField() = sFieldIn.internalField();
 
-    dimensionedScalar DT("DT", dimensionSet(0, 2, -1, 0, 0), 1.0);
+    dimensionedTensor DT("DT", dimensionSet(0, 2, -1, 0, 0), smoothDirection_);
 
     scalar startTime = diffusionRunTime_.startTimeIndex();
     label startIndex = diffusionRunTime_.timeIndex();
