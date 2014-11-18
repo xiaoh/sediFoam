@@ -210,6 +210,19 @@
       + fvc::interpolate(beta)*phib
     );
 
+    volSymmTensorField B
+    (
+        IOobject
+        (
+            "B",
+            runTime.timeName(),
+            mesh,
+            IOobject::NO_READ,
+            IOobject::AUTO_WRITE
+        ),
+        mesh,
+        dimensionedSymmTensor("B", sqr(Ub.dimensions()), symmTensor::zero)
+    );
 
     Info<< "Calculating field DDtUa and DDtUb\n" << endl;
 

@@ -91,3 +91,9 @@ for (int corr = 0; corr < nCorr; corr++)
 gradP.adjust(rUbA);
 
 Ub.correctBoundaryConditions();
+
+volTensorField gradUb("gradUb",fvc::grad(Ub));
+volScalarField nuEff("nuEff",continuousPhaseTurbulence->nuEff());
+volScalarField k("k",continuousPhaseTurbulence->k());
+
+B = ((2.0/3.0)*I)*k - nuEff*(twoSymm(gradUb));

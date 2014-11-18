@@ -187,12 +187,7 @@ void  enhancedCloud::updateDragOnParticles()
             {
                 vector normalVec = vector(0,1,0);
                 pDrag_[particleI] += 
-                    6*3.1416*nub_*rhob_*(-pVel)/distWall*(p.d()*p.d())/4.0*normalVec;
-#ifdef DEBUG_FORCE
-                Info<< "lubrication is: "
-                    << 6*3.1416*nub_*rhob_*(-pVel)/distWall*(p.d()*p.d())/4.0*normalVec
-                    << endl;
-#endif
+                    6*3.1416*nub_*rhob_*(-pVel)/distWall*(p.d()*p.d())/16.0*normalVec;
             }
         }
 
@@ -206,6 +201,12 @@ void  enhancedCloud::updateDragOnParticles()
             << - 0.5*rhob_*p.Vol()*(p.U()-p.UOld())/runTime().deltaT().value()
             << endl;
         Info<< "total force is: " << pDrag_[particleI] << endl;
+        if (lubricationFlag_ == 1)
+        {
+                Info<< "lubrication is: "
+                    << 6*3.1416*nub_*rhob_*(-pVel)/distWall*(p.d()*p.d())/4.0*normalVec
+                    << endl;
+        }
 #endif
     }
 }
