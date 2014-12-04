@@ -112,6 +112,7 @@ void enhancedCloud::updateParticleUr()
 void  enhancedCloud::updateDragOnParticles()
 {
     vectorField gradp = fvc::grad(pf_)().internalField();
+    vectorField curlU = fvc::curl(Uf_)().internalField();
 
     setupParticleDia();
     updateParticleAlpha();
@@ -166,12 +167,14 @@ void  enhancedCloud::updateDragOnParticles()
         {
             vector dupdt = (p.U()-p.UOld())/runTime().deltaT().value();
             pDrag_[particleI] += 0.5*rhob_*p.Vol()*(DDtUf_[p.cell()]-dupdt);
-            Info<< "dupdt is: " << dupdt << endl;
-            Info<< "mass is: " << rhob_*p.Vol() << endl;
         }
         if (particleLiftForceFlag_ == 1)
         {
-        //    unfinished
+            scalar liftCoeff = 1.6;
+            pDrag_[particleI] += 
+                liftCoeff*rhob_*sqrt(nub_)*sqr(p.d())
+             *((Uri_[particleI])^curlU[p.cell()])
+               /sqrt(mag(curlU[p.cell()]));
         }
         if (particleHistoryForceFlag_ == 1)
         {
@@ -187,7 +190,8 @@ void  enhancedCloud::updateDragOnParticles()
             {
                 vector normalVec = vector(0,1,0);
                 pDrag_[particleI] += 
-                    6*3.1416*nub_*rhob_*(-pVel)/distWall*(p.d()*p.d())/16.0*normalVec;
+                    6*3.1416*nub_*rhob_
+                   *(-pVel)/distWall*(p.d()*p.d())/4.0*normalVec;
             }
         }
 
@@ -201,11 +205,33 @@ void  enhancedCloud::updateDragOnParticles()
             << - 0.5*rhob_*p.Vol()*(p.U()-p.UOld())/runTime().deltaT().value()
             << endl;
         Info<< "total force is: " << pDrag_[particleI] << endl;
+        if (particleLiftForceFlag_ == 1)
+        {
+            Info<< "Uri is: " << Uri_[particleI] << endl; 
+            Info<< "curlU is: " << curlU[p.cell()] << endl; 
+            Info<< "Uri x curlU is: "
+                << (Uri_[particleI]^curlU[p.cell()]) << endl; 
+            Info<< "d^2 is: " << sqr(p.d()) << endl; 
+
+            Info<< "lift force is: " 
+                <<  1.6*rhob_*sqrt(nub_)*sqr(p.d())
+                   *((Uri_[particleI])^curlU[p.cell()])
+                   /sqrt(mag(curlU[p.cell()])) << endl;
+        }
         if (lubricationFlag_ == 1)
         {
+            scalar distMin = 0.0001*p.d();
+            scalar distMax = 0.1*p.d();
+            scalar distWall = p.position().y() - 0.5*p.d();
+            scalar pVel = p.U().y();
+            if (distWall < distMax && distWall > distMin)
+            {
+                vector normalVec = vector(0,1,0);
                 Info<< "lubrication is: "
-                    << 6*3.1416*nub_*rhob_*(-pVel)/distWall*(p.d()*p.d())/4.0*normalVec
+                    << 6*3.1416*nub_*rhob_
+                      *(-pVel)/distWall*(p.d()*p.d())/4.0*normalVec
                     << endl;
+            }
         }
 #endif
     }
@@ -217,6 +243,7 @@ void enhancedCloud::calcTcFields()
 {
     Omega_.internalField() *= 0.0;
     Asrc_.internalField() *= 0.0;
+    Asrc2_.internalField() *= 0.0;
 
     // prepare alpha & Ur list for drag computation
     updateParticleAlpha();
@@ -281,6 +308,7 @@ void enhancedCloud::calcTcFields()
             // to be smoothed later!
             Omega_.internalField()[cellI] += omg;
             Asrc_.internalField()[cellI] += omg*(p.U() - UfSmoothed_[cellI]);
+            Asrc2_.internalField()[cellI] += omg*(p.U() - UfSmoothed_[cellI]);
             // Asrc_.internalField()[cellI] += omg*(p.U() - Uf_[cellI]);
         }
 
@@ -380,6 +408,25 @@ enhancedCloud::enhancedCloud
         IOobject
         (
             "A_Source",
+            runTime().timeName(),
+            mesh_,
+            IOobject::NO_READ,
+            IOobject::AUTO_WRITE
+        ),
+        mesh_,
+        dimensionedVector
+        (
+           "zero",
+           dimensionSet(1, -2, -2, 0, 0),
+           vector::zero
+        ),
+        zeroGradientFvPatchVectorField::typeName
+    ),
+    Asrc2_
+    (
+        IOobject
+        (
+            "A_Source_unsmoothed",
             runTime().timeName(),
             mesh_,
             IOobject::NO_READ,

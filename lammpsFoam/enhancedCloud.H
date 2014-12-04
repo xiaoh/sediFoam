@@ -97,6 +97,7 @@ class enhancedCloud
         //- Eulerian Fields for Tc
         volScalarField Omega_;
         volVectorField Asrc_;
+        volVectorField Asrc2_;
 
         //- Fluid density
         scalar rhob_;
