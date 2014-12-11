@@ -180,7 +180,7 @@ void softParticleCloud::adjustLampTimestep()
 
     solidStepsPerDt_ = scalar(dnSub);  // This is the real # of substeps.
     solidStepsPerDt_ =
-      (int(solidStepsPerDt_)/int(subCycles_) + 1)*int(subCycles_);
+      (int(solidStepsPerDt_)/int(subCycles_))*int(subCycles_);
 
     // Adjusted Lammps timestep
     scalar dtLampAdj = scalar(this->runTime().deltaT().value()/dnSub);
