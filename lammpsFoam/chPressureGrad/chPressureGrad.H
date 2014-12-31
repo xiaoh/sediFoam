@@ -63,6 +63,7 @@ namespace Foam
     static Switch chFlowMode_;
     static dimensionedVector Ubar_;
     static dimensionedVector gradPbar_;
+    static dimensionedVector dpdt_;
     static dimensionedScalar magUbar_;
     static word specifiedQuantity_;
 

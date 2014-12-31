@@ -35,6 +35,7 @@ namespace Foam {
   vector chPressureGrad::flowDirection_ = vector::zero;
   dimensionedVector  chPressureGrad::Ubar_("Ubar", dimVelocity, vector::zero);
   dimensionedVector  chPressureGrad::gradPbar_("gradPbar", dimAcceleration, vector::zero);
+  dimensionedVector  chPressureGrad::dpdt_("dpdt", dimAcceleration, vector::zero);
   dimensionedScalar  chPressureGrad::magUbar_ = mag(Ubar_);
   word chPressureGrad::specifiedQuantity_("none");
 
@@ -74,13 +75,24 @@ namespace Foam {
           magGradPbar.value() += VSMALL;
           flowDirection_ = (gradPbar_ /magGradPbar ).value();
           chFlowMode_ = true;
-          
+
           Info << "*********** NOTE ***********" << nl
                << "Running in CHANNEL FLOW MODE. " << nl
                << "constant gradP imposed!" << nl
                << "gradP = " << gradPbar_.value() << nl 
                << "****************************" << nl
                << endl;
+
+          if(transportProperties.found("dpdt"))
+          {
+              dpdt_ = transportProperties.lookup("dpdt");
+              Info << "*********** NOTE ***********" << nl
+                   << "gradP will increase by dpdt!" << nl
+                   << "dpdt = " << dpdt_.value() << nl 
+                   << "****************************" << nl
+                   << endl;
+          }
+          
       }
       else
       {
@@ -209,6 +221,14 @@ namespace Foam {
           }
           else if(specifiedQuantity_ == "gradPbar")
           {
+
+              // dimensionedScalar magUbarStar =
+              //     (flowDirection_ & U_)().weightedAverage(beta*alpha_.mesh().V());
+
+              scalar deltaT = U_.mesh().time().value();
+
+              value_ = mag(gradPbar_) + mag(dpdt_)*deltaT;
+
               Info << solverName_ 
                    << " current Ubar = " << magUbarStar.value() 
                    << "  "
