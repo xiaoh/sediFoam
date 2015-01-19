@@ -35,6 +35,8 @@ extern "C" {
   int lammps_get_global_n(void *);              /* return # of atoms */
 
   /* get atom x&v&d & rho & type */
+  void lammps_get_initial_np(void* ptr, int* np_);
+
   void lammps_get_initial_info(void* ptr, double* coords, double* velos,
                                double* diam, double* rho_, int* tag_,
                                int* lmpCpuId_, int* type_);

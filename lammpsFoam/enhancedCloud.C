@@ -166,6 +166,11 @@ void  enhancedCloud::updateDragOnParticles()
         if (particleAddedMassFlag_ == 1)
         {
             vector dupdt = (p.U()-p.UOld())/runTime().deltaT().value();
+            if (mag(dupdt) > 100)
+            {
+                // Avoid too large added mass
+                dupdt = dupdt/mag(dupdt)*100;
+            }
             pDrag_[particleI] += 0.5*rhob_*p.Vol()*(DDtUf_[p.cell()]-dupdt);
         }
         if (particleLiftForceFlag_ == 1)
@@ -201,10 +206,23 @@ void  enhancedCloud::updateDragOnParticles()
               *p.Vol()*Uri_[particleI] << endl;
         Info<< "pressure gradient force is: "
             << - gradp[p.cell()]*p.Vol() << endl;
+
+        vector dupdt = (p.U()-p.UOld())/runTime().deltaT().value();
+        Info<< "volume of particle is: " << p.Vol() << endl;
+        Info<< "current velocity is: " << p.U() << endl;
+        Info<< "previous velocity is: " << p.UOld() << endl;
+        Info<< "current acceleration is: " << dupdt << endl;
+        if (mag(dupdt) > 100)
+        {
+            dupdt = dupdt/mag(dupdt)*100;
+            Info<< "acceleration too large" << endl;
+            Info<< "the value is adjusted to: " << dupdt << endl;
+        }
         Info<< "added mass is: "
-            << - 0.5*rhob_*p.Vol()*(p.U()-p.UOld())/runTime().deltaT().value()
-            << endl;
+            << - 0.5*rhob_*p.Vol()*dupdt<< endl;
         Info<< "total force is: " << pDrag_[particleI] << endl;
+
+
         if (particleLiftForceFlag_ == 1)
         {
             Info<< "Uri is: " << Uri_[particleI] << endl; 
@@ -540,19 +558,22 @@ enhancedCloud::enhancedCloud
 
     // smooth fluid velocity to initialise the lift&drag coefficients
     // gamma is smoothed field since we smooth it in particleToEulerianField();
-    UfSmoothed_.internalField() =
-        Uf_.internalField()*(1 - gamma_.internalField());
+    UfSmoothed_.internalField() = Uf_.internalField();
 
     if (UfSmoothFlag_ == 1)
     {
+        UfSmoothed_.internalField() *= 
+            (1 - gamma_.internalField());
+
         Info<< "smooth Uf..." << endl;
         smoothField(UfSmoothed_);
+
+        UfSmoothed_.internalField() /=
+            (1 - gamma_.internalField());
+
+        UfSmoothed_.correctBoundaryConditions();
     }
 
-    UfSmoothed_.internalField() /=
-        (1 - gamma_.internalField());
-
-    UfSmoothed_.correctBoundaryConditions();
 }
 
 
@@ -571,19 +592,23 @@ void enhancedCloud::evolve()
 
     label Ns = subCycles_;
 
-    UfSmoothed_.internalField() =
-        Uf_.internalField()*(1 - gamma_.internalField());
+    UfSmoothed_.internalField() = Uf_.internalField();
 
+    // smooth Uf when necessary
     if (UfSmoothFlag_ == 1)
     {
+        UfSmoothed_.internalField() *=
+            (1 - gamma_.internalField());
+
         Info<< "smooth Uf..." << endl;
         smoothField(UfSmoothed_);
+
+        UfSmoothed_.internalField() /=
+            (1 - gamma_.internalField());
+
+        UfSmoothed_.correctBoundaryConditions();
     }
 
-    UfSmoothed_.internalField() /=
-        (1 - gamma_.internalField());
-
-    UfSmoothed_.correctBoundaryConditions();
 
     // evolve Ns steps forward each time when Lammps is called.
     for (label k = 0; k < Ns; k++)
@@ -695,7 +720,17 @@ void enhancedCloud::smoothField(volScalarField& sFieldIn)
 
     while (diffusionRunTime_.loop())
     {
-        while (simple_.correctNonOrthogonal())
+        Info<< "diffusion time is: " << diffusionRunTime_.value() << endl;
+        Info<< "diffusion time index is: " << diffusionRunTime_.timeIndex() << endl;
+        if (diffusionRunTime_.timeIndex() == 1)
+        {
+            Info<< "First step in diffusion..." << endl;
+            while (simple_.correctNonOrthogonal())
+            {
+                solve(fvm::ddt(diffWorkField) - fvm::laplacian(DT, diffWorkField));
+            }
+        }
+        else
         {
             solve(fvm::ddt(diffWorkField) - fvm::laplacian(DT, diffWorkField));
         }
@@ -748,7 +783,14 @@ void enhancedCloud::smoothField(volVectorField& sFieldIn)
 
     while (diffusionRunTime_.loop())
     {
-        while (simple_.correctNonOrthogonal())
+        if (diffusionRunTime_.timeIndex() == 1)
+        {
+            while (simple_.correctNonOrthogonal())
+            {
+                solve(fvm::ddt(diffWorkField) - fvm::laplacian(DT, diffWorkField));
+            }
+        }
+        else
         {
             solve(fvm::ddt(diffWorkField) - fvm::laplacian(DT, diffWorkField));
         }

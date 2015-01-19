@@ -121,15 +121,34 @@ void softParticleCloud::initLammps()
 
     // Setup temporary space for holding x & v for sending to Lammps.
     // Note: global communication of particles is involved in the first step
-    xArray_ = new double [3*nGlobal_];
-    vArray_ = new double [3*nGlobal_];
-    dArray_ = new double [nGlobal_];
-    fArray_ = new double [3*nGlobal_];
 
-    rhoArray_ = new double [nGlobal_];
-    tagArray_ = new int [nGlobal_];
-    lmpCpuIdArray_ = new int [nGlobal_];
-    typeArray_ = new int [nGlobal_];
+    label nprocs = Pstream::nProcs();
+    label myrank = Pstream::myProcNo();
+
+    int* npArray = new int [nprocs];
+
+    lammps_get_initial_np(lmp_, npArray);
+
+    Info<< "creating new arrays..." << endl;
+    Info<< "execution time is: " << runTime_.elapsedCpuTime() << endl;
+
+    Pout<< "npArray is: " << npArray[myrank] << endl;
+    int nLocal = npArray[myrank];
+
+    xArray_ = new double [3*nLocal];
+    vArray_ = new double [3*nLocal];
+    dArray_ = new double [nLocal];
+    fArray_ = new double [3*nLocal];
+
+    rhoArray_ = new double [nLocal];
+    tagArray_ = new int [nLocal];
+    lmpCpuIdArray_ = new int [nLocal];
+    typeArray_ = new int [nLocal];
+
+    Info<< "getting initial info of particles..." << endl;
+    Info<< "execution time is: " << runTime_.elapsedCpuTime() << endl;
+    std::cout<< "size of xArray is: " << sizeof(xArray_) << endl;
+    std::cout<< "size of dArray is: " << sizeof(dArray_) << endl;
 
     // xArray_ etc. are local to Lammps processor
     lammps_get_initial_info
@@ -144,9 +163,12 @@ void softParticleCloud::initLammps()
         typeArray_
     );
 
+    Info<< "constructing particles..." << endl;
+    Info<< "execution time is: " << runTime_.elapsedCpuTime() << endl;
+
     initConstructParticles
     (
-        nGlobal_,
+        nLocal,
         xArray_,
         vArray_,
         dArray_,
@@ -157,14 +179,20 @@ void softParticleCloud::initLammps()
     );
 
 
-    // Pout << "before moving..." << endl;
+    Info<< "before moving..." << endl;
+    Info<< "execution time is: " << runTime_.elapsedCpuTime() << endl;
 
     softParticle::trackingData td0(*this);
     Cloud<softParticle>::move(td0, mesh_.time().deltaTValue());
-    // Pout << "finished moving..." << endl;
+
+    Info << "finished moving..." << endl;
+    Info<< "execution time is: " << runTime_.elapsedCpuTime() << endl;
 
 
     lammps_step(lmp_, 0);
+    Info << "finished steping..." << endl;
+
+    delete [] npArray;
 }
 
 
@@ -226,7 +254,7 @@ void softParticleCloud::adjustLampTimestep()
 // Construct particles in FOAM from Lammps data:
 void softParticleCloud::initConstructParticles
 (
-   int nGlobal_,
+   int nLocal,
    double* x,
    double* v,
    double* d,
@@ -236,10 +264,11 @@ void softParticleCloud::initConstructParticles
    int* type
 )
 {
-    if (Pstream::master())
+    // if (Pstream::master())
     {
         int offset;
-        for (int i = 0; i < nGlobal_; i++)
+        Pout << "center of mesh: " << mesh_.C()[0] << endl;
+        for (int i = 0; i < nLocal; i++)
         {
             offset = 3*i;
             vector pos = mesh_.C()[0];
@@ -309,8 +338,6 @@ void softParticleCloud::initConstructParticles
             p.moveU() = (pos - p.position())/mesh_.time().deltaTValue();
         }
     }
-    Pout<< " After initialization, I have " << nLocal_
-        << " particles locally." << endl;
 }
 
 

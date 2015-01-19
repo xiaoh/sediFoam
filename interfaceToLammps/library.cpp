@@ -99,36 +99,68 @@ int lammps_get_global_n(void *ptr)
 // Originaly designed to provide coordinate and velocity information to Foam
 // Not extened to provide particle diameter, density, and type as well.
 // The name will, however, not be updated.
+void lammps_get_initial_np(void* ptr, int* np_)
+{
+  printf("start getting info..");
+  int myrank;
+  int mysize;
+  MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+  MPI_Comm_size(MPI_COMM_WORLD, &mysize);
+
+  LAMMPS *lammps = (LAMMPS *) ptr;
+  int natoms = static_cast<int> (lammps->atom->natoms);
+
+  printf("creating array of the number of particle..");
+  int *copyNp = new int[mysize];
+
+  printf("initializing the number of particles in each processor");
+  for (int i = 0; i < mysize; i++) {
+    copyNp[i] = 0;
+  }
+
+  int nlocal = lammps->atom->nlocal;
+
+  copyNp[myrank] = nlocal;
+
+  printf("calling MPI_Allreduce");
+  MPI_Allreduce(copyNp, np_, mysize, MPI_INT, MPI_SUM, lammps->world);
+
+  delete [] copyNp;
+}
+
+/* ---------------------------------------------------------------------- */
+
+/* ---------------------------------------------------------------------- */
+// Originaly designed to provide coordinate and velocity information to Foam
+// Not extened to provide particle diameter, density, and type as well.
+// The name will, however, not be updated.
 void lammps_get_initial_info(void* ptr, double* coords, double* velos, double* diam,
                      double* rho_, int* tag_, int* lmpCpuId_, int* type_)
 {
+  printf("start getting info..");
   int myrank;
   MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
 
   LAMMPS *lammps = (LAMMPS *) ptr;
   int natoms = static_cast<int> (lammps->atom->natoms);
+  int nlocal = lammps->atom->nlocal;
 
-  double *copyx = new double[3*natoms];
-  double *copyv = new double[3*natoms];
-  double *copyd = new double[natoms];
-  double *copyRho = new double[natoms];
-  int *copytype = new int[natoms];
-  int *copytag = new int[natoms];
-  int *copylmpCpuId = new int[natoms];
-
-  for (int i = 0; i < 3*natoms; i++) {
-    copyx[i] = 0.0;
-    copyv[i] = 0.0;
+  printf("initializing position and velocity");
+  for (int i = 0; i < 3*nlocal; i++) {
+    coords[i] = 0.0;
+    velos[i] = 0.0;
   }
 
-  for (int i = 0; i < natoms; i++) {
-    copyd[i] = 0.0;
-    copyRho[i] = 0.0;
-    copytype[i] = 0;
-    copytag[i] = 0;
-    copylmpCpuId[i] = 0;
+  printf("initializing other values");
+  for (int i = 0; i < nlocal; i++) {
+    diam[i] = 0.0;
+    rho_[i] = 0.0;
+    type_[i] = 0;
+    tag_[i] = 0;
+    lmpCpuId_[i] = 0;
   }
 
+  printf("find the pointers");
   //Info provided to Foam Cloud.
   double **x = lammps->atom->x;
   double **v = lammps->atom->v;
@@ -141,48 +173,31 @@ void lammps_get_initial_info(void* ptr, double* coords, double* velos, double* d
 
   // Other info used in this function
   int *tag = lammps->atom->tag;
-  int nlocal = lammps->atom->nlocal;
 
   int id,offset;
+  printf("start the loop!");
   for (int i = 0; i < nlocal; i++) {
-    id = tag[i];
-    offset = 3*(id-1);
+
+    offset = 3*i;
     // Get coordinates
-    copyx[offset+0] = x[i][0];
-    copyx[offset+1] = x[i][1];
-    copyx[offset+2] = x[i][2];
+    coords[offset+0] = x[i][0];
+    coords[offset+1] = x[i][1];
+    coords[offset+2] = x[i][2];
     // Copy velocities
-    copyv[offset+0] = v[i][0];
-    copyv[offset+1] = v[i][1];
-    copyv[offset+2] = v[i][2];
+    velos[offset+0] = v[i][0];
+    velos[offset+1] = v[i][1];
+    velos[offset+2] = v[i][2];
     // Copy diameters
-    copyd[id-1] = r[i] * 2.0;
+    diam[i] = r[i] * 2.0;
     // Copy density
     // commented by rui
     // modify the density
-    copyRho[id-1] = 3.0*rho[i]/(4.0*3.14159265358917323846*r[i]*r[i]*r[i]);
+    rho_[i] = 3.0*rho[i]/(4.0*3.14159265358917323846*r[i]*r[i]*r[i]);
     // Copy type
-    copytype[id-1] = type[i];
-    copytag[id-1] = tag[i];
-    copylmpCpuId[id-1] = myrank;
+    type_[i] = type[i];
+    tag_[i] = tag[i];
+    lmpCpuId_[i] = myrank;
   }
-
-  MPI_Allreduce(copyx, coords, 3*natoms, MPI_DOUBLE, MPI_SUM,
-                lammps->world);
-  MPI_Allreduce(copyv, velos, 3*natoms, MPI_DOUBLE, MPI_SUM, lammps->world);
-  MPI_Allreduce(copyd, diam, natoms, MPI_DOUBLE, MPI_SUM, lammps->world);
-  MPI_Allreduce(copyRho, rho_, natoms, MPI_DOUBLE, MPI_SUM, lammps->world);
-  MPI_Allreduce(copytag, tag_, natoms, MPI_INT, MPI_SUM, lammps->world);
-  MPI_Allreduce(copylmpCpuId, lmpCpuId_, natoms, MPI_INT, MPI_SUM, lammps->world);
-  MPI_Allreduce(copytype, type_, natoms, MPI_INT, MPI_SUM, lammps->world);
-
-  delete [] copyx;
-  delete [] copyv;
-  delete [] copyd;
-  delete [] copyRho;
-  delete [] copytag;
-  delete [] copylmpCpuId;
-  delete [] copytype;
 }
 
 /* ---------------------------------------------------------------------- */
