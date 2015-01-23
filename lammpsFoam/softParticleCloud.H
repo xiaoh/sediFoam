@@ -156,6 +156,9 @@ class softParticleCloud
                 int* type
             );
 
+            //- Add OpenFOAM particles
+            void addNewParticles();
+
         //- Disallow default bitwise copy construct
         softParticleCloud(const softParticleCloud&);
 
@@ -186,6 +189,15 @@ protected:
         volVectorField& Ue_;
 
         IOdictionary cloudProperties_;
+
+        //- If add any particles in the simulation
+        scalar addParticleFlag_;
+        symmTensor addParticleBox_;
+
+
+        //- If delete any particles in the simulation
+        scalar deleteParticleFlag_;
+        symmTensor deleteParticleBox_;
 
         // References to the physical field
 
@@ -224,6 +236,8 @@ protected:
         //  move across the processor boundary
         void setPositionCell();
 
+        //- Add and delete particles
+        void addAndDeleteParticle();
 
         //- Transpose the scalar of different processors
         template<class DataType>

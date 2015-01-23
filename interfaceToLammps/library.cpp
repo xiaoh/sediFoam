@@ -20,12 +20,15 @@
 #include "update.h"
 #include "input.h"
 #include "atom.h"
+#include "atom_vec.h"
 #include "fix_fluid_drag.h" // added JS
 #include "modify.h"
 #include "string.h"
 #include "stdio.h"
 #include "math.h"
 #include "math_const.h"
+#include "random_park.h"
+#include "memory.h"
 
 using namespace LAMMPS_NS;
 
@@ -372,3 +375,149 @@ void lammps_set_timestep(void *ptr, double dt_i)
   lammps->update->dt = dt_i;
 }
 
+/* ---------------------------------------------------------------------- */
+
+void lammps_create_particle(void *ptr)
+{
+  LAMMPS *lammps = (LAMMPS *) ptr;
+
+  int natom = static_cast<int> (lammps->atom->natoms);
+  int ntype = 1;
+  double xNew[3];
+
+    xNew[0] = 0.1;
+    xNew[1] = 0.1;
+    xNew[2] = 0.1;
+
+    lammps->atom->avec->create_atom(ntype,xNew);
+    tagint *tag = lammps->atom->tag;
+    int nlocal = lammps->atom->nlocal;
+
+    tagint max = 0;
+    tagint maxtag_all = 0;
+
+    for (int i = 0; i < nlocal; i++) max = MAX(max,tag[i]);
+    MPI_Allreduce(&max,&maxtag_all,1,MPI_LMP_TAGINT,MPI_MAX,lammps->world);
+
+
+    int n = lammps->atom->nlocal - 1;
+    lammps->atom->tag[n] = maxtag_all + 1;
+
+    lammps->atom->v[n][0] = 0.1;
+    lammps->atom->v[n][1] = 0.1;
+    lammps->atom->v[n][2] = 0.1;
+
+    double radtmp = 0.005;
+    lammps->atom->radius[n] = radtmp;
+    lammps->atom->rmass[n] = 4.0*3.14159265358917323846/3.0 * radtmp*radtmp*radtmp * 2500;
+
+    for (int j = 0; j < lammps->modify->nfix; j++)
+      if (lammps->modify->fix[j]->create_attribute) lammps->modify->fix[j]->set_arrays(n);
+
+    lammps->atom->natoms += 1;
+}
+
+
+void lammps_delete_particle(void *ptr, int* deleteList)
+{
+  LAMMPS *lammps = (LAMMPS *) ptr;
+  class RanPark *random = new RanPark(lammps,100);
+
+  int i,j,m,iwhichglobal,iwhichlocal;
+  int ndel,ndeltopo[4];
+  int *list,*mark;
+
+  // if (update->ntimestep != next_reneighbor) return;
+
+  // grow list and mark arrays if necessary
+
+  int nmax = 0;
+  if (lammps->atom->nlocal > nmax) {
+    lammps->memory->destroy(list);
+    lammps->memory->destroy(mark);
+    nmax = lammps->atom->nmax;
+    lammps->memory->create(list,nmax,"evaporate:list");
+    lammps->memory->create(mark,nmax,"evaporate:mark");
+  }
+
+  // ncount = # of deletable atoms in region that I own
+  // nall = # on all procs // nbefore = # on procs before me
+  // list[ncount] = list of local indices of atoms I can delete
+
+  double **x = lammps->atom->x;
+  int *mask = lammps->atom->mask;
+  tagint *tag = lammps->atom->tag;
+  int nlocal = lammps->atom->nlocal;
+
+  printf("listing particles..");
+  int ncount = 0;
+  for (i = 0; i < nlocal; i++)
+  {
+    printf("++++=> checking particle: %5d\n", tag[i]);
+    printf("++++=> deteleList[tag[i]-1] is: %d\n", deleteList[tag[i]-1]);
+    if (deleteList[tag[i]-1] == 1) // delete the particle when assigned in openfoam
+      list[ncount++] = i;
+  }
+
+  int nall,nbefore;
+  MPI_Allreduce(&ncount,&nall,1,MPI_INT,MPI_SUM,lammps->world);
+  MPI_Scan(&ncount,&nbefore,1,MPI_INT,MPI_SUM,lammps->world);
+  nbefore -= ncount;
+
+  // ndel = total # of atom deletions, in or out of region
+  // ndeltopo[1,2,3,4] = ditto for bonds, angles, dihedrals, impropers
+  // mark[] = 1 if deleted
+
+  ndel = 0;
+
+  for (i = 0; i < nlocal; i++) mark[i] = 0;
+
+  printf("marking particles..");
+  while (nall && ndel < 0.5) {
+    iwhichglobal = static_cast<int> (nall*random->uniform());
+    if (iwhichglobal < nbefore) nbefore--;
+    else if (iwhichglobal < nbefore + ncount) {
+      iwhichlocal = iwhichglobal - nbefore;
+      mark[list[iwhichlocal]] = 1;
+      list[iwhichlocal] = list[ncount-1];
+      ncount--;
+    }
+    ndel++;
+    nall--;
+  }
+
+  // atomic deletions
+  // choose atoms randomly across all procs and mark them for deletion
+  // shrink eligible list as my atoms get marked
+  // keep ndel,ncount,nall,nbefore current after each atom deletion
+
+  // delete my marked atoms
+  // loop in reverse order to avoid copying marked atoms
+
+  printf("manupulating..");
+  AtomVec *avec = lammps->atom->avec;
+
+  for (i = nlocal-1; i >= 0; i--) {
+    if (mark[i]) {
+      avec->copy(lammps->atom->nlocal-1,i,1);
+      lammps->atom->nlocal--;
+    }
+  }
+
+  // reset global natoms and bonds, angles, etc
+  // if global map exists, reset it now instead of waiting for comm
+  // since deleting atoms messes up ghosts
+
+  lammps->atom->natoms -= ndel;
+
+  // if (ndel && atom->map_style) {
+  //   atom->nghost = 0;
+  //   atom->map_init();
+  //   atom->map_set();
+  // }
+
+  // // statistics
+
+  // ndeleted += ndel;
+  // next_reneighbor = update->ntimestep + nevery;
+}

@@ -188,7 +188,6 @@ void softParticleCloud::initLammps()
     Info << "finished moving..." << endl;
     Info<< "execution time is: " << runTime_.elapsedCpuTime() << endl;
 
-
     lammps_step(lmp_, 0);
     Info << "finished steping..." << endl;
 
@@ -340,6 +339,41 @@ void softParticleCloud::initConstructParticles
     }
 }
 
+// Add new particles in OpenFOAM
+void softParticleCloud::addNewParticles()
+{
+    Pout << "Adding new particle... " << endl;
+
+    vector pos = mesh_.C()[0];
+    label cellI = 0;
+
+    vector velo = vector(0,0,0);
+
+    scalar ds = 0.005;
+    scalar rhos = 2500;
+    label tags = 2;
+    label lmpCpuIds = 0;
+    label types = 1;
+
+    // create a new softParticle when it is in the current processor
+    // but the computer is running much slower than before.
+    softParticle* ptr =
+        new softParticle
+        (
+            pMesh(),
+            pos,
+            cellI,
+            ds,
+            velo,
+            rhos,
+            tags,
+            lmpCpuIds,
+            types
+        );
+
+    addParticle(ptr);
+}
+
 
 // Wrap up Lammps, i.e. delete the pointer.
 void softParticleCloud::finishLammps()
@@ -432,6 +466,12 @@ softParticleCloud::softParticleCloud
     cpuTimeSplit_(6, 0.0)
 {
     subCycles_ = readScalar(cloudProperties_.lookup("subCycles"));
+    addParticleFlag_ = cloudProperties_.lookupOrDefault("addParticle",0);
+    deleteParticleFlag_ = cloudProperties_.lookupOrDefault("deleteParticle",0);
+    addParticleBox_ =
+        cloudProperties_.lookupOrDefault("addParticleBox",symmTensor::zero);
+    deleteParticleBox_ =
+        cloudProperties_.lookupOrDefault("deleteParticleBox",symmTensor::zero);
 
     nLocal_ = 0;
 
@@ -504,6 +544,84 @@ void softParticleCloud::setPositionCell()
 
         // Update cell number:
         p.cell() = mesh_.findCell(p.position());
+    }
+}
+
+//- Adding and deleting particles
+void softParticleCloud::addAndDeleteParticle()
+{
+    // Try adding new particles
+    if (addParticleFlag_ == 1)
+    {
+        addNewParticles();
+        lammps_create_particle(lmp_);
+    }
+
+    // Try deleting existing particles
+    if (deleteParticleFlag_ == 1)
+    {
+        int maxTag = 0;
+        int i = 0;
+        for
+        (
+            softParticleCloud::iterator pIter = begin();
+            pIter != end();
+            ++pIter, ++i
+        )
+        {
+            softParticle& p = pIter();
+            maxTag = max(p.ptag(),maxTag);
+        }
+
+        int* deleteList = new int [maxTag];
+
+        for (int i = 0; i < maxTag; i++)
+        {
+            // TODO: this may have problem for parallel computing
+            deleteList[i] = 0;
+        }
+
+        i = 0;
+        for
+        (
+            softParticleCloud::iterator pIter = begin();
+            pIter != end();
+            ++pIter, ++i
+        )
+        {
+            softParticle& p = pIter();
+
+            scalar x1 = deleteParticleBox_.component(0);
+            scalar x2 = deleteParticleBox_.component(1);
+            scalar y1 = deleteParticleBox_.component(2);
+            scalar y2 = deleteParticleBox_.component(3);
+            scalar z1 = deleteParticleBox_.component(4);
+            scalar z2 = deleteParticleBox_.component(5);
+
+            vector pPosition = p.position();
+
+            Info<< "position is: " << pPosition << endl;
+            Info<< "p tag is: " << p.ptag() << endl;
+            Info<< "deleteList is: " << deleteList[p.ptag() - 1] << endl;
+            Info<< "deleteParticleBox_ is: " << deleteParticleBox_ << endl;
+            Info<< "x1 " << (pPosition.x() - x1)*(pPosition.x() - x2) << endl;
+            Info<< "x2 " << (pPosition.y() - y1)*(pPosition.y() - y2) << endl;
+            Info<< "x3 " << (pPosition.z() - z1)*(pPosition.z() - z2) << endl;
+
+            if ((pPosition.x() - x1)*(pPosition.x() - x2) < 0 && 
+                (pPosition.y() - y1)*(pPosition.y() - y2) < 0 &&
+                (pPosition.z() - z1)*(pPosition.z() - z2) < 0 ) 
+            {
+                Info<< "deleting particle at: " << pPosition << endl; 
+                // TODO: this may have problem for parallel computing
+                deleteList[p.ptag() - 1] = 1;
+                deleteParticle(p);
+            }
+        }
+
+        lammps_delete_particle(lmp_, deleteList);
+
+        delete [] deleteList;
     }
 }
 
@@ -733,14 +851,23 @@ void  softParticleCloud::lammpsEvolveForward
 
     cpuTimeSplit_[3] += runTime_.elapsedCpuTime() - t0;
     t0 = runTime_.elapsedCpuTime();
+   
+
+    // Adding and deleting particle at certain regions
+    addAndDeleteParticle();
+
     // Ask lammps to move certain steps forward
+    Info<< "LAMMPS evolving.. " << endl;
     lammps_step(lmp_, nstep);
 
+    Info<< "finished moving the particles in LAMMPS." << endl;
     cpuTimeSplit_[4] += runTime_.elapsedCpuTime() - t0;
     t0 = runTime_.elapsedCpuTime();
     // Start getting information from LAMMPS
     // Harvest the number of particles in each lmp cpu
     int lmpNLocal = lammps_get_local_n(lmp_);
+
+    Info<< "the number of particles in LAMMPS now is: " << lmpNLocal << endl;
 
     // Harvest more infomation from each lmp cpu
     double* fromLmpXArrayLocal = new double [3*lmpNLocal];
@@ -748,6 +875,8 @@ void  softParticleCloud::lammpsEvolveForward
     int* fromLmpFoamCpuIdArrayLocal = new int[lmpNLocal];
     int* fromLmpLmpCpuIdArrayLocal = new int[lmpNLocal];
     int* fromLmpTagArrayLocal = new int[lmpNLocal];
+
+    Info<< "getting local info.." << endl;
 
     lammps_get_local_info
     (
@@ -758,6 +887,8 @@ void  softParticleCloud::lammpsEvolveForward
         fromLmpLmpCpuIdArrayLocal,
         fromLmpTagArrayLocal
     );
+
+    Info<< "local info obtained!" << endl;
 
     // Transform the data obtained from lammps to openfoam format
     vectorList fromLmpXList(lmpNLocal, vector::zero);
@@ -786,11 +917,19 @@ void  softParticleCloud::lammpsEvolveForward
                 fromLmpVArrayLocal[3*i + 2]
             );
 
+        Info<< "fromLmpXArrayLocal is: " << fromLmpXArrayLocal[i] << endl;
+        Info<< "fromLmpVArrayLocal is: " << fromLmpVArrayLocal[i] << endl;
+        Info<< "fromLmpFoamCpuIdArrayLocal is: " << fromLmpFoamCpuIdArrayLocal[i] << endl;
+        Info<< "fromLmpLmpCpuIdArrayLocal is: " << fromLmpLmpCpuIdArrayLocal[i] << endl;
+        Info<< "fromLmpTagArrayLocal is: " << fromLmpTagArrayLocal[i] << endl;
+
         label foamCpuId = fromLmpFoamCpuIdArrayLocal[i];
         fromLmpFoamCpuIdList[i] = foamCpuId;
         fromLmpTagList[i] = fromLmpTagArrayLocal[i];
         foamParticleNo[foamCpuId] ++;
     }
+
+    Info<< "data transformed into each processor!" << endl;
 
     delete [] fromLmpXArrayLocal;
     delete [] fromLmpVArrayLocal;
