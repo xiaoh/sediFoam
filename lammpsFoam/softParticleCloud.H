@@ -156,9 +156,6 @@ class softParticleCloud
                 int* type
             );
 
-            //- Add OpenFOAM particles
-            void addNewParticles();
-
         //- Disallow default bitwise copy construct
         softParticleCloud(const softParticleCloud&);
 
@@ -167,6 +164,16 @@ class softParticleCloud
 
         //- Adjust the time step for LAMMPS
         void adjustLampTimestep();
+
+        //- Add OpenFOAM particles
+        void addNewParticles();
+
+        //- Add and delete particles
+        void addAndDeleteParticle();
+
+        //- find the CFD cell ID in which the particles are added
+        void findAddParticleCells();
+
 
 protected:
 
@@ -193,6 +200,11 @@ protected:
         //- If add any particles in the simulation
         scalar addParticleFlag_;
         symmTensor addParticleBox_;
+        scalar addParticleTimeStep_;
+        scalar timeToAddParticle_;
+        labelList addParticleCellID_;
+        vector addParticleInfo_;
+        labelList deleteParticleList_;
 
 
         //- If delete any particles in the simulation
@@ -235,9 +247,6 @@ protected:
         //- Set the particle cell index after the particles
         //  move across the processor boundary
         void setPositionCell();
-
-        //- Add and delete particles
-        void addAndDeleteParticle();
 
         //- Transpose the scalar of different processors
         template<class DataType>
@@ -312,7 +321,6 @@ public:
             {
                 return cpuTimeSplit_;
             };
-
 
         // I-O
 

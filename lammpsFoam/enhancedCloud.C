@@ -199,6 +199,23 @@ void  enhancedCloud::updateDragOnParticles()
                    *(-pVel)/distWall*(p.d()*p.d())/4.0*normalVec;
             }
         }
+        if (inletForceRatio_ > 0)
+        {
+            scalar x1 = addParticleBox_.component(0);
+            scalar x2 = addParticleBox_.component(1);
+            scalar y1 = addParticleBox_.component(2);
+            scalar y2 = addParticleBox_.component(3);
+            scalar z1 = addParticleBox_.component(4);
+            scalar z2 = addParticleBox_.component(5);
+            
+            if ((p.position().x() - x1)*(p.position().x() - x2) < 0 && 
+                (p.position().y() - y1)*(p.position().y() - y2) < 0 &&
+                (p.position().z() - z1)*(p.position().z() - z2) < 0 ) 
+            {
+                pDrag_[particleI] = 
+                  - inletForceRatio_*gradp[p.cell()]*p.Vol();        // Buoyancy
+            }
+        }
 
 #ifdef DEBUG_FORCE
         Info<< "drag is: "
@@ -533,6 +550,8 @@ enhancedCloud::enhancedCloud
         cloudProperties_.lookupOrDefault("particleHistoryForce",0);
     lubricationFlag_ =
         cloudProperties_.lookupOrDefault("lubricationForce",0);
+    inletForceRatio_ =
+        cloudProperties_.lookupOrDefault("inletForce",0);
 
     Info<< particleDragFlag_
         << particlePressureGradFlag_
@@ -540,6 +559,7 @@ enhancedCloud::enhancedCloud
         << particleLiftForceFlag_
         << particleHistoryForceFlag_
         << lubricationFlag_
+        << inletForceRatio_
         << endl;
 
     // initial quantities for dragModel
@@ -613,7 +633,21 @@ void enhancedCloud::evolve()
     // evolve Ns steps forward each time when Lammps is called.
     for (label k = 0; k < Ns; k++)
     {
+        if (addParticleFlag_ == 1 && timeToAddParticle_ <= 0)
+        {
+            addParticleOpenFOAM();
+        }
+        if (deleteParticleFlag_ == 1)
+        {
+            deleteParticleOpenFOAM();
+        }
+
         label nLocal = size(); // Get number of local particles
+
+        if (particleCount_ != size())
+        {
+            particleCount_ = size();
+        }
 
         // the squence of the data on XLocal and VLocal is the same as
         // sequence of local particle index.
@@ -643,15 +677,11 @@ void enhancedCloud::evolve()
         // (Harvest XLocal & VLocal)  Lammps --> Cloud
         setPositionVeloCpuId(XLocal, VLocal, lmpCpuIdLocal);
 
-        Pout<< "Particle number before moving: " << size() << endl;
-
         diffusionRunTime_.cpuTimeIncrement();
         // move particle to the new position
         Cloud<softParticle>::move(td0, mesh_.time().deltaTValue());
 
         particleMoveTime_ += diffusionRunTime_.cpuTimeIncrement();
-
-        Pout<< "Particle number after moving: " << size() << endl;
 
         if (particleCount_ != size())
         {
@@ -911,6 +941,116 @@ void enhancedCloud::assertParticleInCell()
 
 }
 
+//- Add OpenFOAM particles
+void enhancedCloud::addParticleOpenFOAM()
+{
+    Pout << "Adding new OF particle... " << endl;
+
+    int maxTag = 0;
+    int i = 0;
+    for
+    (
+        softParticleCloud::iterator pIter = begin();
+        pIter != end();
+        ++pIter, ++i
+    )
+    {
+        softParticle& p = pIter();
+        maxTag = max(p.ptag(),maxTag);
+    }
+
+    forAll(addParticleCellID_, i)
+    {
+
+        label cellI = addParticleCellID_[i];
+        vector pos = mesh_.C()[cellI];
+
+        vector velo = vector(0,0,0);
+
+        scalar ds = addParticleInfo_[0];
+        scalar rhos = addParticleInfo_[1];
+        label types = int(addParticleInfo_[2]);
+
+        // TODO: this may have problems for parallel computing
+        label lmpCpuIds = 0;
+        label tags = maxTag + 1 + i;
+
+        softParticle* ptr =
+            new softParticle
+            (
+                pMesh(),
+                pos,
+                cellI,
+                ds,
+                velo,
+                rhos,
+                tags,
+                lmpCpuIds,
+                types
+            );
+
+        softParticleCloud::addParticle(ptr);
+    }
+}
+
+
+//- Delete OpenFOAM particles
+void enhancedCloud::deleteParticleOpenFOAM()
+{
+    if (deleteParticleFlag_ == 1)
+    {
+        int maxTag = 0;
+        int i = 0;
+        for
+        (
+            softParticleCloud::iterator pIter = begin();
+            pIter != end();
+            ++pIter, ++i
+        )
+        {
+            softParticle& p = pIter();
+            maxTag = max(p.ptag(),maxTag);
+        }
+                                        
+        deleteParticleList_.setSize(maxTag);
+        for (int i = 0; i < maxTag; i++)
+        {
+            // TODO: this may have problem for parallel computing
+            deleteParticleList_[i] = 0;
+        }
+
+        int nDelete = 0;
+        i = 0;
+        for
+        (
+            softParticleCloud::iterator pIter = begin();
+            pIter != end();
+            ++pIter, ++i
+        )
+        {
+            softParticle& p = pIter();
+            vector pPosition = p.position();
+
+            scalar x1 = deleteParticleBox_.component(0);
+            scalar x2 = deleteParticleBox_.component(1);
+            scalar y1 = deleteParticleBox_.component(2);
+            scalar y2 = deleteParticleBox_.component(3);
+            scalar z1 = deleteParticleBox_.component(4);
+            scalar z2 = deleteParticleBox_.component(5);
+            
+            if ((pPosition.x() - x1)*(pPosition.x() - x2) < 0 && 
+                (pPosition.y() - y1)*(pPosition.y() - y2) < 0 &&
+                (pPosition.z() - z1)*(pPosition.z() - z2) < 0 ) 
+            {
+                // TODO: this may have problem for parallel computing
+                deleteParticleList_[p.ptag() - 1] = 1;
+                deleteParticle(p);
+                nDelete++;
+            }
+        }
+    }
+}
+
 
 //- Display sum of drag as Eulerian field
 void enhancedCloud::dragInfo()
@@ -980,12 +1120,13 @@ void enhancedCloud::averageInfo()
     reduce(totalVel, sumOp<vector>());
     reduce(localNumber, sumOp<label>());
     totalNumber = localNumber;
-    averageVel = totalVel/totalNumber;
+    averageVel = totalVel/(totalNumber+SMALL);
 
     Info<< "total number of particles is: " << totalNumber << endl;
     Info<< "total velocity of particles is: " << totalVel << endl;
     Info<< "average velocity of all particles is: " << averageVel << endl;
 }
+
 
 } // End namespace Foam
 

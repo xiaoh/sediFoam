@@ -125,6 +125,7 @@ class enhancedCloud
         label particleLiftForceFlag_;
         label particleHistoryForceFlag_;
         label lubricationFlag_;
+        label inletForceRatio_;;
 
     // Private Member Functions
 
@@ -156,6 +157,12 @@ class enhancedCloud
 
         // Assert all particles in cells;
         void assertParticleInCell();
+
+        //- Add OpenFOAM particle
+        void addParticleOpenFOAM();
+
+        //- Delete OpenFOAM particle
+        void deleteParticleOpenFOAM();
 
 
 public:

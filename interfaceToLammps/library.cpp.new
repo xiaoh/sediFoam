@@ -22,7 +22,6 @@
 #include "atom.h"
 #include "atom_vec.h"
 #include "fix_fluid_drag.h" // added JS
-#include "fix_pour_new.h" // added JS
 #include "modify.h"
 #include "string.h"
 #include "stdio.h"
@@ -30,8 +29,6 @@
 #include "math_const.h"
 #include "random_park.h"
 #include "memory.h"
-#include "group.h"
-#include "domain.h"
 
 using namespace LAMMPS_NS;
 
@@ -214,7 +211,7 @@ int lammps_get_local_n(void* ptr)
 
   int nlocal = lammps->atom->nlocal;
 
-  printf("++++=A> nlocal is: %5d\n", nlocal);
+  // printf("++++=A> nlocal is: %5d\n", nlocal);
 
   return nlocal;
 }
@@ -314,7 +311,7 @@ void lammps_put_local_info(void* ptr, int nLocalIn, double* fdrag,
 
   if (nLocalIn != nlocal)
     {
-      printf("Incoming drag not consistent with local particle number.");
+      printf("Incoming drag not consisent with local particle number.");
     }
 
   //initialize the tag pair to sort
@@ -359,7 +356,7 @@ void lammps_step(void *ptr, int n)
     MPI_Abort(MPI_COMM_WORLD, 1);
   }
 
-  lammps->input->one(cmd);
+  lammps ->input->one(cmd);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -380,86 +377,53 @@ void lammps_set_timestep(void *ptr, double dt_i)
 
 /* ---------------------------------------------------------------------- */
 
-void lammps_create_particle(void* ptr, int npAdd, double* position, double diameter,
+void lammps_create_particle(void* ptr, double* position, double diameter,
                               double rho, int type)
 {
   LAMMPS *lammps = (LAMMPS *) ptr;
 
   int natom = static_cast<int> (lammps->atom->natoms);
-  double **x = lammps->atom->x;
   int ntype = type;
-  double *xNew = new double[2];
+  double xNew[3];
 
-  tagint max = 0;
-  tagint maxtag_all = 0;
-
-  tagint *tagOld = lammps->atom->tag;
-  for (int i = 0; i < lammps->atom->nlocal; i++) max = MAX(max,tagOld[i]);
-  // MPI_Allreduce(&max,&maxtag_all,1,MPI_LMP_TAGINT,MPI_MAX,lammps->world);
-
-  for (int m = 0; m < npAdd; m++) {
-    xNew[0] = position[0+m*3];
-    xNew[1] = position[1+m*3];
-    xNew[2] = position[2+m*3];
+    printf("adding the position..");
+    xNew[0] = 0.1; // position[0];
+    xNew[1] = 0.1; // position[1];
+    xNew[2] = 0.1; // position[2];
 
     lammps->atom->avec->create_atom(ntype,xNew);
+    tagint *tag = lammps->atom->tag;
     int nlocal = lammps->atom->nlocal;
 
+    tagint max = 0;
+    tagint maxtag_all = 0;
+
+    for (int i = 0; i < nlocal; i++) max = MAX(max,tag[i]);
+    MPI_Allreduce(&max,&maxtag_all,1,MPI_LMP_TAGINT,MPI_MAX,lammps->world);
+
+
+    printf("adding the tag");
     int n = lammps->atom->nlocal - 1;
-    // lammps->atom->tag[n] = maxtag_all + 1;
-    lammps->atom->tag[n] = (max + m+1);
- 
-    // // Setting PBC?
-    // for (int i = 0; i < nlocal; i++) {
-    //   double delx = xNew[0] - x[i][0];
-    //   double dely = xNew[1] - x[i][1];
-    //   double delz = xNew[2] - x[i][2];
-    //   lammps->domain->minimum_image(delx,dely,delz);
-    // }
+    lammps->atom->tag[n] = maxtag_all + 1;
 
-    // TODO: may have problem here
-    int igroup = lammps->group->find("active");
-    int groupbit = lammps->group->bitmask[igroup];
-
-    lammps->atom->mask[n] = 1 | groupbit;
-    lammps->atom->image[n] = ((imageint) IMGMAX << IMG2BITS) |
-                             ((imageint) IMGMAX << IMGBITS) | IMGMAX;
+    printf("adding the velocity");
     lammps->atom->v[n][0] = 0.0;
     lammps->atom->v[n][1] = 0.0;
     lammps->atom->v[n][2] = 0.0;
 
-    double radtmp = 0.5*diameter;
+    printf("adding the radius");
+    double radtmp = diameter;
     lammps->atom->radius[n] = radtmp;
     lammps->atom->rmass[n] = 4.0*3.14159265358917323846/3.0 * radtmp*radtmp*radtmp * rho;
 
     for (int j = 0; j < lammps->modify->nfix; j++)
-    {
-      if (lammps->modify->fix[j]->create_attribute)
-      {
-          lammps->modify->fix[j]->set_arrays(n);
-      }
-    }
-  }
+      if (lammps->modify->fix[j]->create_attribute) lammps->modify->fix[j]->set_arrays(n);
 
-  lammps->atom->natoms += npAdd;
-
-  if (lammps->atom->map_style) {
-    lammps->atom->nghost = 0;
-    lammps->atom->map_init();
-    lammps->atom->map_set();
-  }
-
-  for (int j = 0; j < lammps->modify->nfix; j++)
-  {
-    int nt = lammps->update->ntimestep;
-    lammps->modify->fix[j]->next_reneighbor = nt + 1;
-  }
-
-  delete [] xNew;
-
+    lammps->atom->natoms += 1;
 }
 
-void lammps_delete_particle(void *ptr, int* deleteList, int nDelete)
+
+void lammps_delete_particle(void *ptr, int* deleteList)
 {
   LAMMPS *lammps = (LAMMPS *) ptr;
   class RanPark *random = new RanPark(lammps,100);
@@ -490,13 +454,14 @@ void lammps_delete_particle(void *ptr, int* deleteList, int nDelete)
   tagint *tag = lammps->atom->tag;
   int nlocal = lammps->atom->nlocal;
 
+  printf("listing particles..");
   int ncount = 0;
   for (i = 0; i < nlocal; i++)
   {
+    // printf("++++=> checking particle: %5d\n", tag[i]);
+    // printf("++++=> deteleList[tag[i]-1] is: %d\n", deleteList[tag[i]-1]);
     if (deleteList[tag[i]-1] == 1) // delete the particle when assigned in openfoam
-    {
-        list[ncount++] = i;
-    }
+      list[ncount++] = i;
   }
 
   int nall,nbefore;
@@ -512,9 +477,8 @@ void lammps_delete_particle(void *ptr, int* deleteList, int nDelete)
 
   for (i = 0; i < nlocal; i++) mark[i] = 0;
 
-  double flux = nDelete - 0.5;
-
-  while (nall && ndel < flux) {
+  printf("marking particles..");
+  while (nall && ndel < 0.5) {
     iwhichglobal = static_cast<int> (nall*random->uniform());
     if (iwhichglobal < nbefore) nbefore--;
     else if (iwhichglobal < nbefore + ncount) {
@@ -535,6 +499,7 @@ void lammps_delete_particle(void *ptr, int* deleteList, int nDelete)
   // delete my marked atoms
   // loop in reverse order to avoid copying marked atoms
 
+  printf("manupulating..");
   AtomVec *avec = lammps->atom->avec;
 
   for (i = nlocal-1; i >= 0; i--) {
@@ -550,15 +515,14 @@ void lammps_delete_particle(void *ptr, int* deleteList, int nDelete)
 
   lammps->atom->natoms -= ndel;
 
-  if (ndel && lammps->atom->map_style) {
-    lammps->atom->nghost = 0;
-    lammps->atom->map_init();
-    lammps->atom->map_set();
-  }
+  // if (ndel && atom->map_style) {
+  //   atom->nghost = 0;
+  //   atom->map_init();
+  //   atom->map_set();
+  // }
 
   // // statistics
 
   // ndeleted += ndel;
   // next_reneighbor = update->ntimestep + nevery;
-  // delete [] random;
 }

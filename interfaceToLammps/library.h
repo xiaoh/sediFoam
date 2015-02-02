@@ -55,8 +55,9 @@ extern "C" {
   void lammps_step(void* ptr, int n);
   void lammps_set_timestep(void* ptr, double dt_i);
   double lammps_get_timestep(void* ptr);
-  void lammps_create_particle(void* ptr);
-  void lammps_delete_particle(void* ptr, int* deleteList);
+  void lammps_create_particle(void* ptr, int npAdd, double* position, double diameter,
+                              double rho, int type);
+  void lammps_delete_particle(void* ptr, int* deleteList, int nDelete);
 
   /* used in the sorting part when assigning data from OpenFOAM*/
   struct tagpair {

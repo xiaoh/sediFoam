@@ -266,7 +266,6 @@ void softParticleCloud::initConstructParticles
     // if (Pstream::master())
     {
         int offset;
-        Pout << "center of mesh: " << mesh_.C()[0] << endl;
         for (int i = 0; i < nLocal; i++)
         {
             offset = 3*i;
@@ -337,41 +336,6 @@ void softParticleCloud::initConstructParticles
             p.moveU() = (pos - p.position())/mesh_.time().deltaTValue();
         }
     }
-}
-
-// Add new particles in OpenFOAM
-void softParticleCloud::addNewParticles()
-{
-    Pout << "Adding new particle... " << endl;
-
-    vector pos = mesh_.C()[0];
-    label cellI = 0;
-
-    vector velo = vector(0,0,0);
-
-    scalar ds = 0.005;
-    scalar rhos = 2500;
-    label tags = 2;
-    label lmpCpuIds = 0;
-    label types = 1;
-
-    // create a new softParticle when it is in the current processor
-    // but the computer is running much slower than before.
-    softParticle* ptr =
-        new softParticle
-        (
-            pMesh(),
-            pos,
-            cellI,
-            ds,
-            velo,
-            rhos,
-            tags,
-            lmpCpuIds,
-            types
-        );
-
-    addParticle(ptr);
 }
 
 
@@ -466,14 +430,33 @@ softParticleCloud::softParticleCloud
     cpuTimeSplit_(6, 0.0)
 {
     subCycles_ = readScalar(cloudProperties_.lookup("subCycles"));
+
+    // Initialize the setup of adding and deleting particles
     addParticleFlag_ = cloudProperties_.lookupOrDefault("addParticle",0);
     deleteParticleFlag_ = cloudProperties_.lookupOrDefault("deleteParticle",0);
     addParticleBox_ =
         cloudProperties_.lookupOrDefault("addParticleBox",symmTensor::zero);
+    addParticleInfo_ =
+        cloudProperties_.lookupOrDefault("addParticleInfo",vector::zero);
+
+    if (addParticleFlag_ == 1)
+    {
+        addParticleTimeStep_ =
+            readScalar(cloudProperties_.lookup("addParticleTimeStep"));
+    }
+    else
+    {
+        addParticleTimeStep_ = 0.0;
+    }
+
+    timeToAddParticle_ = addParticleTimeStep_;
+
     deleteParticleBox_ =
         cloudProperties_.lookupOrDefault("deleteParticleBox",symmTensor::zero);
 
     nLocal_ = 0;
+
+    findAddParticleCells();
 
     // This is particularly for continuation run. After reading in
     // diameters, refresh gamma field.
@@ -544,84 +527,6 @@ void softParticleCloud::setPositionCell()
 
         // Update cell number:
         p.cell() = mesh_.findCell(p.position());
-    }
-}
-
-//- Adding and deleting particles
-void softParticleCloud::addAndDeleteParticle()
-{
-    // Try adding new particles
-    if (addParticleFlag_ == 1)
-    {
-        addNewParticles();
-        lammps_create_particle(lmp_);
-    }
-
-    // Try deleting existing particles
-    if (deleteParticleFlag_ == 1)
-    {
-        int maxTag = 0;
-        int i = 0;
-        for
-        (
-            softParticleCloud::iterator pIter = begin();
-            pIter != end();
-            ++pIter, ++i
-        )
-        {
-            softParticle& p = pIter();
-            maxTag = max(p.ptag(),maxTag);
-        }
-
-        int* deleteList = new int [maxTag];
-
-        for (int i = 0; i < maxTag; i++)
-        {
-            // TODO: this may have problem for parallel computing
-            deleteList[i] = 0;
-        }
-
-        i = 0;
-        for
-        (
-            softParticleCloud::iterator pIter = begin();
-            pIter != end();
-            ++pIter, ++i
-        )
-        {
-            softParticle& p = pIter();
-
-            scalar x1 = deleteParticleBox_.component(0);
-            scalar x2 = deleteParticleBox_.component(1);
-            scalar y1 = deleteParticleBox_.component(2);
-            scalar y2 = deleteParticleBox_.component(3);
-            scalar z1 = deleteParticleBox_.component(4);
-            scalar z2 = deleteParticleBox_.component(5);
-
-            vector pPosition = p.position();
-
-            Info<< "position is: " << pPosition << endl;
-            Info<< "p tag is: " << p.ptag() << endl;
-            Info<< "deleteList is: " << deleteList[p.ptag() - 1] << endl;
-            Info<< "deleteParticleBox_ is: " << deleteParticleBox_ << endl;
-            Info<< "x1 " << (pPosition.x() - x1)*(pPosition.x() - x2) << endl;
-            Info<< "x2 " << (pPosition.y() - y1)*(pPosition.y() - y2) << endl;
-            Info<< "x3 " << (pPosition.z() - z1)*(pPosition.z() - z2) << endl;
-
-            if ((pPosition.x() - x1)*(pPosition.x() - x2) < 0 && 
-                (pPosition.y() - y1)*(pPosition.y() - y2) < 0 &&
-                (pPosition.z() - z1)*(pPosition.z() - z2) < 0 ) 
-            {
-                Info<< "deleting particle at: " << pPosition << endl; 
-                // TODO: this may have problem for parallel computing
-                deleteList[p.ptag() - 1] = 1;
-                deleteParticle(p);
-            }
-        }
-
-        lammps_delete_particle(lmp_, deleteList);
-
-        delete [] deleteList;
     }
 }
 
@@ -698,17 +603,19 @@ void  softParticleCloud::lammpsEvolveForward
     label nprocs = Pstream::nProcs();
     label myrank = Pstream::myProcNo();
 
+    label nList = size();
+
     // Start putting information to LAMMPS
     labelList lmpParticleNo(nprocs, 0);
 
     scalar t0 = runTime_.elapsedCpuTime();
     // Calculate the number of particles in each LmpCpu
     // and obtain the drag force
-    vectorList fromFoamDragList(size(), vector::zero);
-    labelList fromFoamFoamCpuIdList(size(), myrank);
-    labelList fromFoamTagList(size(), 0);
+    vectorList fromFoamDragList(nList, vector::zero);
+    labelList fromFoamFoamCpuIdList(nList, myrank);
+    labelList fromFoamTagList(nList, 0);
 
-    labelList assembleLmpCpuIdList(size(), 0);
+    labelList assembleLmpCpuIdList(nList, 0);
 
     int i = 0;
     for
@@ -794,6 +701,8 @@ void  softParticleCloud::lammpsEvolveForward
     cpuTimeSplit_[2] += runTime_.elapsedCpuTime() - t0;
     t0 = runTime_.elapsedCpuTime();
 
+    addAndDeleteParticle();
+
     if (contiguous<vector>())
     {
         // Pout<< "contiguous vector is true." << endl;
@@ -851,10 +760,6 @@ void  softParticleCloud::lammpsEvolveForward
 
     cpuTimeSplit_[3] += runTime_.elapsedCpuTime() - t0;
     t0 = runTime_.elapsedCpuTime();
-   
-
-    // Adding and deleting particle at certain regions
-    addAndDeleteParticle();
 
     // Ask lammps to move certain steps forward
     Info<< "LAMMPS evolving.. " << endl;
@@ -876,8 +781,6 @@ void  softParticleCloud::lammpsEvolveForward
     int* fromLmpLmpCpuIdArrayLocal = new int[lmpNLocal];
     int* fromLmpTagArrayLocal = new int[lmpNLocal];
 
-    Info<< "getting local info.." << endl;
-
     lammps_get_local_info
     (
         lmp_,
@@ -887,8 +790,6 @@ void  softParticleCloud::lammpsEvolveForward
         fromLmpLmpCpuIdArrayLocal,
         fromLmpTagArrayLocal
     );
-
-    Info<< "local info obtained!" << endl;
 
     // Transform the data obtained from lammps to openfoam format
     vectorList fromLmpXList(lmpNLocal, vector::zero);
@@ -916,12 +817,6 @@ void  softParticleCloud::lammpsEvolveForward
                 fromLmpVArrayLocal[3*i + 1],
                 fromLmpVArrayLocal[3*i + 2]
             );
-
-        Info<< "fromLmpXArrayLocal is: " << fromLmpXArrayLocal[i] << endl;
-        Info<< "fromLmpVArrayLocal is: " << fromLmpVArrayLocal[i] << endl;
-        Info<< "fromLmpFoamCpuIdArrayLocal is: " << fromLmpFoamCpuIdArrayLocal[i] << endl;
-        Info<< "fromLmpLmpCpuIdArrayLocal is: " << fromLmpLmpCpuIdArrayLocal[i] << endl;
-        Info<< "fromLmpTagArrayLocal is: " << fromLmpTagArrayLocal[i] << endl;
 
         label foamCpuId = fromLmpFoamCpuIdArrayLocal[i];
         fromLmpFoamCpuIdList[i] = foamCpuId;
@@ -987,6 +882,7 @@ void  softParticleCloud::lammpsEvolveForward
         fromLmpFoamCpuIdList
     );
 
+    // Separate the information from LAMMPS into  lists of
     cpuTimeSplit_[0] += runTime_.elapsedCpuTime() - t0;
     t0 = runTime_.elapsedCpuTime();
 
@@ -1016,11 +912,11 @@ void  softParticleCloud::lammpsEvolveForward
 
     // Collect all the information transfered from other processors in lists
     // and combine them into one list
-    vectorList toFoamXList(size(), vector::zero);
-    vectorList toFoamVList(size(), vector::zero);
-    labelList toFoamFoamCpuIdList(size(), 0);
-    labelList toFoamLmpCpuIdList(size(), 0);
-    labelList toFoamTagList(size(), 0);
+    vectorList toFoamXList(nList, vector::zero);
+    vectorList toFoamVList(nList, vector::zero);
+    labelList toFoamFoamCpuIdList(nList, 0);
+    labelList toFoamLmpCpuIdList(nList, 0);
+    labelList toFoamTagList(nList, 0);
 
     flattenList<vectorList> (toFoamXListList, toFoamXList);
     flattenList<vectorList> (toFoamVListList, toFoamVList);
@@ -1029,13 +925,13 @@ void  softParticleCloud::lammpsEvolveForward
     flattenList<labelList> (toFoamTagListList, toFoamTagList);
 
     // Assign the position & velocity & lmpCpuId to the particle in OpenFOAM
-    labelList sortedFromFoamTag(size(),0);
-    labelList sortedToFoamTag(size(),0);
+    labelList sortedFromFoamTag(nList,0);
+    labelList sortedToFoamTag(nList,0);
 
     sortedOrder(fromFoamTagList, sortedFromFoamTag);
     sortedOrder(toFoamTagList, sortedToFoamTag);
 
-    for(label i = 0; i < size(); i++)
+    for(label i = 0; i < nList; i++)
     {
         label fromI = sortedFromFoamTag[i];
         label toI = sortedToFoamTag[i];
@@ -1065,8 +961,122 @@ void  softParticleCloud::lammpsEvolveForward
     cpuTimeSplit_[2] += runTime_.elapsedCpuTime() - t0;
     t0 = runTime_.elapsedCpuTime();
 
+    Info<< "LAMMPS evolving finished! .. " << endl;
 } // Job done; Proceed to next fluid calculation step.
 
+
+// Add new particles in OpenFOAM
+void softParticleCloud::addNewParticles()
+{
+    Pout << "Adding new particle... " << endl;
+
+    int npAdd = addParticleCellID_.size(); 
+    double* posArray = new double [3*npAdd];
+    forAll(addParticleCellID_, i)
+    {
+
+        label cellI = addParticleCellID_[i];
+        vector pos = mesh_.C()[cellI];
+        posArray[0+3*i] = pos[0];
+        posArray[1+3*i] = pos[1];
+        posArray[2+3*i] = pos[2];
+    }
+    
+    double ds = addParticleInfo_[0];
+    double rhos = addParticleInfo_[1];
+    int types = int(addParticleInfo_[2]);
+    lammps_create_particle(lmp_, npAdd, posArray, ds, rhos, types);
+    delete [] posArray;
+}
+
+
+//- Adding and deleting particles
+void softParticleCloud::addAndDeleteParticle()
+{
+    // Try adding new particles
+    if (addParticleFlag_ == 1 && timeToAddParticle_ <= 0)
+    {
+        addNewParticles();
+        timeToAddParticle_ = addParticleTimeStep_;
+    }
+    else
+    {
+        timeToAddParticle_ -= runTime_.deltaT().value();
+        Info<< "Time to add particle: " << timeToAddParticle_ << endl;
+    }
+
+
+    if (deleteParticleFlag_ == 1)
+    {
+        int size = deleteParticleList_.size();
+        int* deleteList = new int [size];
+        int nDelete = 0;
+        for (int i = 0; i < size; i++)
+        {
+            // TODO: this may have problem for parallel computing
+            deleteList[i] = deleteParticleList_[i];
+            if (deleteList[i] > 0)
+            {
+                nDelete++;
+            }
+        }
+            
+        if (nDelete > 0)
+        {
+            Info<< "deleting particle in LAMMPS..." << endl; 
+            lammps_delete_particle(lmp_, deleteList, nDelete);
+        }
+
+        delete [] deleteList;
+    }
+}
+
+//- find the CFD cell ID in which the particles are added
+void softParticleCloud::findAddParticleCells()
+{
+
+    label nP = 0;
+    forAll(mesh_.C(), cellI)
+    {
+        vector meshC = mesh_.C()[cellI];
+
+        scalar x1 = addParticleBox_.component(0);
+        scalar x2 = addParticleBox_.component(1);
+        scalar y1 = addParticleBox_.component(2);
+        scalar y2 = addParticleBox_.component(3);
+        scalar z1 = addParticleBox_.component(4);
+        scalar z2 = addParticleBox_.component(5);
+        
+        if ((meshC.x() - x1)*(meshC.x() - x2) < 0 && 
+            (meshC.y() - y1)*(meshC.y() - y2) < 0 &&
+            (meshC.z() - z1)*(meshC.z() - z2) < 0 ) 
+        {
+            nP++;
+        }
+    }
+
+    addParticleCellID_.setSize(nP);
+    int i = 0;
+    forAll(mesh_.C(), cellI)
+    {
+        vector meshC = mesh_.C()[cellI];
+
+        scalar x1 = addParticleBox_.component(0);
+        scalar x2 = addParticleBox_.component(1);
+        scalar y1 = addParticleBox_.component(2);
+        scalar y2 = addParticleBox_.component(3);
+        scalar z1 = addParticleBox_.component(4);
+        scalar z2 = addParticleBox_.component(5);
+        
+        if ((meshC.x() - x1)*(meshC.x() - x2) < 0 && 
+            (meshC.y() - y1)*(meshC.y() - y2) < 0 &&
+            (meshC.z() - z1)*(meshC.z() - z2) < 0 ) 
+        {
+            addParticleCellID_[i] = cellI;
+            i++;
+        }
+    }
+}
 
 void softParticleCloud::writeFields() const
 {
