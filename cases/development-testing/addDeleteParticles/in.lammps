@@ -1,0 +1,45 @@
+# 2D particle pipe simulation
+
+atom_style	sphere
+atom_modify	map array
+boundary	ff ff ff
+newton		off
+# processors  2 1 2
+
+communicate single vel yes
+read_data 	In_initial.in2
+
+neighbor	0.0001 bin
+# neighbor	0 bin
+neigh_modify	delay 0
+
+# pair_style  none
+pair_style  gran/hooke/history 800.0 NULL 59 NULL 0.1 0
+pair_coeff  * *
+timestep	1e-5
+
+group       bottom type 2
+group       active subtract all bottom
+
+velocity    all set 0.0 0.0 0.0 units box
+
+fix		1 all gravity 9.81 vector 0 -1 0 # spherical 90.0 -180.0    
+fix		2 all nve/sphere  
+fix     3 all fdrag
+fix     4 bottom freeze
+# fix		5 active setforce 0 0.1 0
+
+fix  xwall all wall/gran 800.0 NULL 59 NULL 0.1 0 xplane -0.5 0.5
+fix  ywall all wall/gran 800.0 NULL 59 NULL 0.1 0 yplane -0.5 0.5
+fix  zwall all wall/gran 800.0 NULL 59 NULL 0.1 0 zplane -0.5 0.5
+
+#dump		id all custom 30000 snapshot2.bubblemd tag type x y z vx vy vz
+dump		id all custom 10000 snapshot.bubblemd id type diameter mass x y z vx vy vz
+
+#thermo_style  granular # not work. syntax change?
+thermo_style  one   # granular does not work
+thermo		20000
+thermo_modify	lost error
+#restart		1000000  restart.*.bubblemd
+
+

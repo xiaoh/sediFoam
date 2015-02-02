@@ -1,0 +1,49 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  1.4                                   |
+|   \\  /    A nd           | Web:      http://www.openfoam.org               |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+
+FoamFile
+{
+    version         2.0;
+    format          ascii;
+
+    root            "";
+    case            "";
+    instance        "";
+    local           "";
+
+    class           dictionary;
+    object          transportProperties;
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+rhoa            rhoa [1 -3 0 0 0 0 0] 2500; // density of the particle
+
+rhob            rhob [1 -3 0 0 0 0 0] 1000; // density of the carrier
+
+nua             nua [0 2 -1 0 0 0 0] 1.0e-6; // viscousity of the particle (defined but not used)
+
+nub             nub [0 2 -1 0 0 0 0] 1.0e-6; // viscousity of the carrier
+
+da              da [0 1 0 0 0 0 0] 0.005; // diameter of the particle
+
+// db              db [0 1 0 0 0 0 0] 0.1; // not using
+
+Cvm             Cvm [0 0 0 0 0 0 0] 0.0; // some coefficient for UEqn (taken as zero)
+
+Cl              Cl [0 0 0 0 0 0 0] 0; // lift coefficient (taken as zero)
+
+Ct              Ct [0 0 0 0 0 0 0] 1; // some coefficient used in the turbulence (defined but not used)
+
+// Ubar            Ubar [0 1 -1 0 0 0 0] (4.0 0 0); // average velocity in the channel
+
+transportModel  Newtonian;
+
+nu              nu [0 2 -1 0 0 0 0] 1.0e-6; // viscousity of the carrier
+
+// ************************************************************************* //
