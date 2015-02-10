@@ -198,18 +198,24 @@ protected:
         IOdictionary cloudProperties_;
 
         //- If add any particles in the simulation
-        scalar addParticleFlag_;
-        symmTensor addParticleBox_;
+        scalar addParticleOption_;
+        tensor addParticleBox_;
         scalar addParticleTimeStep_;
         scalar timeToAddParticle_;
         labelList addParticleCellID_;
         vector addParticleInfo_;
+        scalar randomPerturb_;
+
+        scalar deleteBeforeAddFlag_;
+        labelList deleteBeforeAddList_;
         labelList deleteParticleList_;
+        tensor inletBox_;
+        tensor clearInitialBox_;
 
 
         //- If delete any particles in the simulation
-        scalar deleteParticleFlag_;
-        symmTensor deleteParticleBox_;
+        scalar deleteParticleOption_;
+        tensor deleteParticleBox_;
 
         // References to the physical field
 
@@ -255,6 +261,9 @@ protected:
             List<DataType>& toEveryone,
             List<DataType>& fromEveryone
         );
+
+        //- Determine if a point is in the region
+        bool pointInRegion(vector& point, tensor& box);
 
 public:
 

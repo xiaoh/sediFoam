@@ -125,7 +125,7 @@ class enhancedCloud
         label particleLiftForceFlag_;
         label particleHistoryForceFlag_;
         label lubricationFlag_;
-        label inletForceRatio_;;
+        scalar inletForceRatio_;
 
     // Private Member Functions
 
@@ -160,6 +160,9 @@ class enhancedCloud
 
         //- Add OpenFOAM particle
         void addParticleOpenFOAM();
+
+        //- Delete OpenFOAM particle before adding
+        void deleteParticleBeforeAdd();
 
         //- Delete OpenFOAM particle
         void deleteParticleOpenFOAM();

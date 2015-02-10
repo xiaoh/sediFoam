@@ -432,27 +432,45 @@ softParticleCloud::softParticleCloud
     subCycles_ = readScalar(cloudProperties_.lookup("subCycles"));
 
     // Initialize the setup of adding and deleting particles
-    addParticleFlag_ = cloudProperties_.lookupOrDefault("addParticle",0);
-    deleteParticleFlag_ = cloudProperties_.lookupOrDefault("deleteParticle",0);
-    addParticleBox_ =
-        cloudProperties_.lookupOrDefault("addParticleBox",symmTensor::zero);
-    addParticleInfo_ =
-        cloudProperties_.lookupOrDefault("addParticleInfo",vector::zero);
+    addParticleOption_ = cloudProperties_.lookupOrDefault("addParticle",0);
+    deleteParticleOption_ = cloudProperties_.lookupOrDefault("deleteParticle",0);
+    deleteBeforeAddFlag_ = cloudProperties_.lookupOrDefault("deleteBeforeAdd",0);
 
-    if (addParticleFlag_ == 1)
+    addParticleBox_ =
+        cloudProperties_.lookupOrDefault("addParticleBox", tensor::zero);
+    addParticleInfo_ =
+        cloudProperties_.lookupOrDefault("addParticleInfo", vector::zero);
+    inletBox_ =
+        cloudProperties_.lookupOrDefault("inletBox", tensor::zero);
+    clearInitialBox_ =
+        cloudProperties_.lookupOrDefault("clearInitialBox", addParticleBox_);
+
+    Info<< "clearInitialBox is: " << clearInitialBox_ << endl;
+
+    if (addParticleOption_ > 0)
     {
         addParticleTimeStep_ =
             readScalar(cloudProperties_.lookup("addParticleTimeStep"));
     }
     else
     {
-        addParticleTimeStep_ = 0.0;
+        addParticleTimeStep_ = 1/SMALL;
+    }
+
+    if (addParticleOption_ > 0)
+    {
+        randomPerturb_ =
+            readScalar(cloudProperties_.lookup("randomPerturb"));
+    }
+    else
+    {
+        randomPerturb_ = 0.0;
     }
 
     timeToAddParticle_ = addParticleTimeStep_;
 
     deleteParticleBox_ =
-        cloudProperties_.lookupOrDefault("deleteParticleBox",symmTensor::zero);
+        cloudProperties_.lookupOrDefault("deleteParticleBox",tensor::zero);
 
     nLocal_ = 0;
 
@@ -972,19 +990,23 @@ void softParticleCloud::addNewParticles()
 
     int npAdd = addParticleCellID_.size(); 
     double* posArray = new double [3*npAdd];
-    forAll(addParticleCellID_, i)
-    {
 
-        label cellI = addParticleCellID_[i];
-        vector pos = mesh_.C()[cellI];
-        posArray[0+3*i] = pos[0];
-        posArray[1+3*i] = pos[1];
-        posArray[2+3*i] = pos[2];
-    }
-    
     double ds = addParticleInfo_[0];
     double rhos = addParticleInfo_[1];
     int types = int(addParticleInfo_[2]);
+
+    Random perturbation(size());
+
+    forAll(addParticleCellID_, i)
+    {
+        label cellI = addParticleCellID_[i];
+        vector pos = mesh_.C()[cellI];
+
+        posArray[0+3*i] = pos[0] + randomPerturb_*perturbation.GaussNormal();
+        posArray[1+3*i] = pos[1] + randomPerturb_*perturbation.GaussNormal();
+        posArray[2+3*i] = pos[2] + randomPerturb_*perturbation.GaussNormal();
+    }
+    
     lammps_create_particle(lmp_, npAdd, posArray, ds, rhos, types);
     delete [] posArray;
 }
@@ -994,8 +1016,33 @@ void softParticleCloud::addNewParticles()
 void softParticleCloud::addAndDeleteParticle()
 {
     // Try adding new particles
-    if (addParticleFlag_ == 1 && timeToAddParticle_ <= 0)
+    if (addParticleOption_ > 0 && timeToAddParticle_ <= 0)
     {
+        // Deleting particles before add
+        if (deleteBeforeAddFlag_ == 1)
+        {
+            int size = deleteBeforeAddList_.size();
+            int* deleteList = new int [size];
+            int nDelete = 0;
+            for (int i = 0; i < size; i++)
+            {
+                // TODO: this may have problem for parallel computing
+                deleteList[i] = deleteBeforeAddList_[i];
+                if (deleteList[i] > 0)
+                {
+                    nDelete++;
+                }
+            }
+                
+            if (nDelete > 0)
+            {
+                Info<< "deleting particle before adding..." << endl; 
+                lammps_delete_particle(lmp_, deleteList, nDelete);
+            }
+
+            delete [] deleteList;
+        }
+
         addNewParticles();
         timeToAddParticle_ = addParticleTimeStep_;
     }
@@ -1005,8 +1052,7 @@ void softParticleCloud::addAndDeleteParticle()
         Info<< "Time to add particle: " << timeToAddParticle_ << endl;
     }
 
-
-    if (deleteParticleFlag_ == 1)
+    if (deleteParticleOption_ > 0)
     {
         int size = deleteParticleList_.size();
         int* deleteList = new int [size];
@@ -1040,16 +1086,7 @@ void softParticleCloud::findAddParticleCells()
     {
         vector meshC = mesh_.C()[cellI];
 
-        scalar x1 = addParticleBox_.component(0);
-        scalar x2 = addParticleBox_.component(1);
-        scalar y1 = addParticleBox_.component(2);
-        scalar y2 = addParticleBox_.component(3);
-        scalar z1 = addParticleBox_.component(4);
-        scalar z2 = addParticleBox_.component(5);
-        
-        if ((meshC.x() - x1)*(meshC.x() - x2) < 0 && 
-            (meshC.y() - y1)*(meshC.y() - y2) < 0 &&
-            (meshC.z() - z1)*(meshC.z() - z2) < 0 ) 
+        if (pointInRegion(meshC, addParticleBox_))
         {
             nP++;
         }
@@ -1061,20 +1098,71 @@ void softParticleCloud::findAddParticleCells()
     {
         vector meshC = mesh_.C()[cellI];
 
-        scalar x1 = addParticleBox_.component(0);
-        scalar x2 = addParticleBox_.component(1);
-        scalar y1 = addParticleBox_.component(2);
-        scalar y2 = addParticleBox_.component(3);
-        scalar z1 = addParticleBox_.component(4);
-        scalar z2 = addParticleBox_.component(5);
-        
-        if ((meshC.x() - x1)*(meshC.x() - x2) < 0 && 
-            (meshC.y() - y1)*(meshC.y() - y2) < 0 &&
-            (meshC.z() - z1)*(meshC.z() - z2) < 0 ) 
+        if (pointInRegion(meshC, addParticleBox_)) 
         {
             addParticleCellID_[i] = cellI;
             i++;
         }
+    }
+
+    Info<< "Add " << nP << " particles each time! " << endl;
+}
+
+bool softParticleCloud::pointInRegion(vector& point, tensor& box)
+{
+    scalar x1 = box.component(0);
+    scalar x2 = box.component(1);
+    scalar y1 = box.component(2);
+    scalar y2 = box.component(3);
+    scalar z1 = box.component(4);
+    scalar z2 = box.component(5);
+    scalar r1 = box.component(6);
+    scalar r2 = box.component(7);
+    
+    if (addParticleOption_ == 1) 
+    {
+        if
+        (
+            (point.x() - x1)*(point.x() - x2) < 0 && 
+            (point.y() - y1)*(point.y() - y2) < 0 &&
+            (point.z() - z1)*(point.z() - z2) < 0 
+        )
+        {
+            return 1;
+        }
+        else
+        {
+            return 0;
+        }
+    }
+    else if (addParticleOption_ == 2)
+    {
+        vector p2p1 = vector(x2 - x1, y2 - y1, z2 - z1);
+        scalar h = mag(p2p1);
+        vector pxp1 = vector(point.x() - x1, point.y() - y1, point.z() - z1);
+        scalar dot = (p2p1 & pxp1);
+        if (dot < 0.0 || dot > pow(h,2))
+        {
+            return 0;
+        }
+        else
+        {
+            scalar dsq = (pxp1 & pxp1) - dot*dot/pow(h,2);
+
+            if (dsq > r1*r1 && dsq < r2*r2)
+            {
+                return 1;
+            }
+            else
+            {
+                return 0;
+            }
+        }
+        
+    }
+    else
+    {
+        return 0;
     }
 }
 

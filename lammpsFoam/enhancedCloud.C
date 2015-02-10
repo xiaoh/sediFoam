@@ -201,19 +201,10 @@ void  enhancedCloud::updateDragOnParticles()
         }
         if (inletForceRatio_ > 0)
         {
-            scalar x1 = addParticleBox_.component(0);
-            scalar x2 = addParticleBox_.component(1);
-            scalar y1 = addParticleBox_.component(2);
-            scalar y2 = addParticleBox_.component(3);
-            scalar z1 = addParticleBox_.component(4);
-            scalar z2 = addParticleBox_.component(5);
-            
-            if ((p.position().x() - x1)*(p.position().x() - x2) < 0 && 
-                (p.position().y() - y1)*(p.position().y() - y2) < 0 &&
-                (p.position().z() - z1)*(p.position().z() - z2) < 0 ) 
+            if (pointInRegion(p.position(), inletBox_)) 
             {
                 pDrag_[particleI] = 
-                  - inletForceRatio_*gradp[p.cell()]*p.Vol();        // Buoyancy
+                    p.m()*(inletForceRatio_*vector(0,1,0)-p.U())/runTime().deltaT().value();
             }
         }
 
@@ -550,8 +541,14 @@ enhancedCloud::enhancedCloud
         cloudProperties_.lookupOrDefault("particleHistoryForce",0);
     lubricationFlag_ =
         cloudProperties_.lookupOrDefault("lubricationForce",0);
-    inletForceRatio_ =
-        cloudProperties_.lookupOrDefault("inletForce",0);
+
+    inletForceRatio_ = 0;
+
+    if (addParticleOption_ > 0)
+    {
+        inletForceRatio_ =
+            readScalar(cloudProperties_.lookup("inletForce"));
+    }
 
     Info<< particleDragFlag_
         << particlePressureGradFlag_
@@ -633,11 +630,16 @@ void enhancedCloud::evolve()
     // evolve Ns steps forward each time when Lammps is called.
     for (label k = 0; k < Ns; k++)
     {
-        if (addParticleFlag_ == 1 && timeToAddParticle_ <= 0)
+        if (addParticleOption_ > 0 && timeToAddParticle_ <= 0)
         {
+            if (deleteBeforeAddFlag_ == 1)
+            {
+                deleteParticleBeforeAdd();
+            }
+
             addParticleOpenFOAM();
         }
-        if (deleteParticleFlag_ == 1)
+        if (deleteParticleOption_ > 0)
         {
             deleteParticleOpenFOAM();
         }
@@ -995,9 +997,58 @@ void enhancedCloud::addParticleOpenFOAM()
 
 
 //- Delete OpenFOAM particles
+void enhancedCloud::deleteParticleBeforeAdd()
+{
+    if (deleteParticleOption_ > 0)
+    {
+        int maxTag = 0;
+        int i = 0;
+        for
+        (
+            softParticleCloud::iterator pIter = begin();
+            pIter != end();
+            ++pIter, ++i
+        )
+        {
+            softParticle& p = pIter();
+            maxTag = max(p.ptag(),maxTag);
+        }
+                                        
+        deleteBeforeAddList_.setSize(maxTag);
+        for (int i = 0; i < maxTag; i++)
+        {
+            // TODO: this may have problem for parallel computing
+            deleteBeforeAddList_[i] = 0;
+        }
+
+        int nDelete = 0;
+        i = 0;
+        for
+        (
+            softParticleCloud::iterator pIter = begin();
+            pIter != end();
+            ++pIter, ++i
+        )
+        {
+            softParticle& p = pIter();
+            vector pPosition = p.position();
+
+            if (pointInRegion(pPosition, clearInitialBox_)) 
+            {
+                // TODO: this may have problem for parallel computing
+                deleteBeforeAddList_[p.ptag() - 1] = 1;
+                deleteParticle(p);
+                nDelete++;
+            }
+        }
+    }
+}
+
+
+//- Delete OpenFOAM particles
 void enhancedCloud::deleteParticleOpenFOAM()
 {
-    if (deleteParticleFlag_ == 1)
+    if (deleteParticleOption_ > 0)
     {
         int maxTag = 0;
         int i = 0;
@@ -1031,16 +1082,7 @@ void enhancedCloud::deleteParticleOpenFOAM()
             softParticle& p = pIter();
             vector pPosition = p.position();
 
-            scalar x1 = deleteParticleBox_.component(0);
-            scalar x2 = deleteParticleBox_.component(1);
-            scalar y1 = deleteParticleBox_.component(2);
-            scalar y2 = deleteParticleBox_.component(3);
-            scalar z1 = deleteParticleBox_.component(4);
-            scalar z2 = deleteParticleBox_.component(5);
-            
-            if ((pPosition.x() - x1)*(pPosition.x() - x2) < 0 && 
-                (pPosition.y() - y1)*(pPosition.y() - y2) < 0 &&
-                (pPosition.z() - z1)*(pPosition.z() - z2) < 0 ) 
+            if (pointInRegion(pPosition, deleteParticleBox_)) 
             {
                 // TODO: this may have problem for parallel computing
                 deleteParticleList_[p.ptag() - 1] = 1;
