@@ -39,7 +39,8 @@ make yes-KSPACE
 make yes-MANYBODY
 make yes-MOLECULE
 make yes-FLD
-make yes-RIGID
+make yes-RIGID # freeze
+make yes-MISC # deposit
 
 version=`uname`
 # Use different options according to different versions

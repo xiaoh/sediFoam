@@ -10,5 +10,7 @@ rm -rf processor*
 rm -rf *[1-9]*
 rm -rf probes 
 rm -rf sets
+rm -rf postProcessing
+rm log
 rm log.*
 rm snapshot.*

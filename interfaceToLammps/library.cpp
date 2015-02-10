@@ -383,6 +383,7 @@ void lammps_set_timestep(void *ptr, double dt_i)
 void lammps_create_particle(void* ptr, int npAdd, double* position, double diameter,
                               double rho, int type)
 {
+  printf("creating LAMMPS particles..");
   LAMMPS *lammps = (LAMMPS *) ptr;
 
   int natom = static_cast<int> (lammps->atom->natoms);
@@ -461,14 +462,13 @@ void lammps_create_particle(void* ptr, int npAdd, double* position, double diame
 
 void lammps_delete_particle(void *ptr, int* deleteList, int nDelete)
 {
+  printf("deleting LAMMPS particles..\n");
   LAMMPS *lammps = (LAMMPS *) ptr;
   class RanPark *random = new RanPark(lammps,100);
 
   int i,j,m,iwhichglobal,iwhichlocal;
   int ndel,ndeltopo[4];
   int *list,*mark;
-
-  // if (update->ntimestep != next_reneighbor) return;
 
   // grow list and mark arrays if necessary
 
@@ -557,6 +557,11 @@ void lammps_delete_particle(void *ptr, int* deleteList, int nDelete)
   }
 
   // // statistics
+  for (int j = 0; j < lammps->modify->nfix; j++)
+  {
+    int nt = lammps->update->ntimestep;
+    lammps->modify->fix[j]->next_reneighbor = nt + 1;
+  }
 
   // ndeleted += ndel;
   // next_reneighbor = update->ntimestep + nevery;

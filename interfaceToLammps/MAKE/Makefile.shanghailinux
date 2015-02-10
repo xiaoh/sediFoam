@@ -39,7 +39,7 @@ LMP_INC =	-DLAMMPS_GZIP
 # LIB = name of MPI library
 
 MPI_INC =       
-MPI_PATH = 
+MPI_PATH =      -L..
 MPI_LIB =	
 
 # FFT library, OPTIONAL
