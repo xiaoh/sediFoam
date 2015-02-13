@@ -44,6 +44,9 @@ extern "C" {
   /* get atom number in each lmp cpu */
   int lammps_get_local_n(void* ptr);
 
+  /* get local domain in each lmp cpu */
+  void lammps_get_local_domain(void* ptr, double* domain_);
+
   /* get atom x&v&foamCpuId&lmpCpuId */
   void lammps_get_local_info(void* ptr, double* coords, double* velos_,
                              int* foamCpuId_, int* lmpCpuId_, int* tag_);
@@ -55,8 +58,8 @@ extern "C" {
   void lammps_step(void* ptr, int n);
   void lammps_set_timestep(void* ptr, double dt_i);
   double lammps_get_timestep(void* ptr);
-  void lammps_create_particle(void* ptr, int npAdd, double* position, double diameter,
-                              double rho, int type);
+  void lammps_create_particle(void* ptr, int npAdd, double* position, double* tag, 
+                              double diameter, double rho, int type);
   void lammps_delete_particle(void* ptr, int* deleteList, int nDelete);
 
   /* used in the sorting part when assigning data from OpenFOAM*/

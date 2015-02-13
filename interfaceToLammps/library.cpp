@@ -221,6 +221,29 @@ int lammps_get_local_n(void* ptr)
 
 
 /* ---------------------------------------------------------------------- */
+// Provide the local domain of each processor
+void lammps_get_local_domain(void* ptr, double* domain_)
+{
+  int myrank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+
+  LAMMPS *lammps = (LAMMPS *) ptr;
+
+  double *sublo = lammps->domain->sublo; 
+  double *subhi = lammps->domain->subhi; 
+
+  domain_[0] = sublo[0];
+  domain_[1] = subhi[0];
+  domain_[2] = sublo[1];
+  domain_[3] = subhi[1];
+  domain_[4] = sublo[2];
+  domain_[5] = subhi[2];
+  printf("++++=A> domain in processor %5d\n is: x0 %f, y0 %f, z0 %f; x1 %f y1 %f, z1 %f.", 
+          myrank, domain_[0], domain_[1], domain_[2], domain_[3], domain_[4], domain_[5]);
+}
+
+
+/* ---------------------------------------------------------------------- */
 // Provide particle info (incl. coordinate, velocity etc.) to Foam
 // Note: No MPI communication occurs! Info is sent to the same processor.
 void lammps_get_local_info(void* ptr, double* coords_, double* velos_,
@@ -313,9 +336,12 @@ void lammps_put_local_info(void* ptr, int nLocalIn, double* fdrag,
     drag_ptr = (FixFluidDrag *) lammps->modify->fix[i];
 
   if (nLocalIn != nlocal)
-    {
-      printf("Incoming drag not consistent with local particle number.");
-    }
+  {
+    int myrank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+    printf("Incoming drag not consistent with local particle number.\n");
+    printf("Incoming drag is: %5d, local particle number is: %5d.", nLocalIn, nlocal);
+  }
 
   //initialize the tag pair to sort
   std::vector<tagpair> lmptagpair (nlocal);
@@ -380,9 +406,13 @@ void lammps_set_timestep(void *ptr, double dt_i)
 
 /* ---------------------------------------------------------------------- */
 
-void lammps_create_particle(void* ptr, int npAdd, double* position, double diameter,
-                              double rho, int type)
+void lammps_create_particle(void* ptr, int npAdd, double* position, double* tag, 
+                            double diameter, double rho, int type)
 {
+
+  int myrank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+
   printf("creating LAMMPS particles..");
   LAMMPS *lammps = (LAMMPS *) ptr;
 
@@ -408,7 +438,7 @@ void lammps_create_particle(void* ptr, int npAdd, double* position, double diame
 
     int n = lammps->atom->nlocal - 1;
     // lammps->atom->tag[n] = maxtag_all + 1;
-    lammps->atom->tag[n] = (max + m+1);
+    lammps->atom->tag[n] = tag[m];
  
     // // Setting PBC?
     // for (int i = 0; i < nlocal; i++) {
@@ -442,7 +472,10 @@ void lammps_create_particle(void* ptr, int npAdd, double* position, double diame
     }
   }
 
-  lammps->atom->natoms += npAdd;
+  int nGlobal = 0;
+  int nlocal = lammps->atom->nlocal;
+  MPI_Allreduce(&nlocal,&nGlobal,1,MPI_INT,MPI_SUM,lammps->world);
+  lammps->atom->natoms = nGlobal;
 
   if (lammps->atom->map_style) {
     lammps->atom->nghost = 0;
@@ -462,7 +495,10 @@ void lammps_create_particle(void* ptr, int npAdd, double* position, double diame
 
 void lammps_delete_particle(void *ptr, int* deleteList, int nDelete)
 {
-  printf("deleting LAMMPS particles..\n");
+  int myrank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
+
+  printf("deleting %5d LAMMPS particles..\n", nDelete);
   LAMMPS *lammps = (LAMMPS *) ptr;
   class RanPark *random = new RanPark(lammps,100);
 
@@ -491,16 +527,21 @@ void lammps_delete_particle(void *ptr, int* deleteList, int nDelete)
   int nlocal = lammps->atom->nlocal;
 
   int ncount = 0;
+
   for (i = 0; i < nlocal; i++)
   {
-    if (deleteList[tag[i]-1] == 1) // delete the particle when assigned in openfoam
+    for (j = 0; j < nDelete; j++)
     {
-        list[ncount++] = i;
+       if (deleteList[j] == tag[i]) // delete the particle when assigned in openfoam
+       {
+           list[ncount++] = i;
+       }
     }
   }
 
   int nall,nbefore;
   MPI_Allreduce(&ncount,&nall,1,MPI_INT,MPI_SUM,lammps->world);
+
   MPI_Scan(&ncount,&nbefore,1,MPI_INT,MPI_SUM,lammps->world);
   nbefore -= ncount;
 
@@ -512,12 +553,21 @@ void lammps_delete_particle(void *ptr, int* deleteList, int nDelete)
 
   for (i = 0; i < nlocal; i++) mark[i] = 0;
 
-  double flux = nDelete - 0.5;
+  double flux = nDelete;
 
-  while (nall && ndel < flux) {
+  double totalFlux = 0;
+  MPI_Allreduce(&flux,&totalFlux,1,MPI_DOUBLE,MPI_SUM,lammps->world);
+
+  totalFlux -= 0.5;
+
+  while (nall && ndel < totalFlux) {
     iwhichglobal = static_cast<int> (nall*random->uniform());
-    if (iwhichglobal < nbefore) nbefore--;
-    else if (iwhichglobal < nbefore + ncount) {
+    if (iwhichglobal < nbefore)
+    {
+      nbefore--;
+    }
+    else if (iwhichglobal < nbefore + ncount)
+    {
       iwhichlocal = iwhichglobal - nbefore;
       mark[list[iwhichlocal]] = 1;
       list[iwhichlocal] = list[ncount-1];

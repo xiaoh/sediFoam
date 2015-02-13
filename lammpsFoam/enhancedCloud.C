@@ -630,6 +630,8 @@ void enhancedCloud::evolve()
     // evolve Ns steps forward each time when Lammps is called.
     for (label k = 0; k < Ns; k++)
     {
+
+        // adding particles when the conditions are satisfied
         if (addParticleOption_ > 0 && timeToAddParticle_ <= 0)
         {
             if (deleteBeforeAddFlag_ == 1)
@@ -639,6 +641,7 @@ void enhancedCloud::evolve()
 
             addParticleOpenFOAM();
         }
+        // deleting particles when the conditions are satisfied
         if (deleteParticleOption_ > 0)
         {
             deleteParticleOpenFOAM();
@@ -752,11 +755,8 @@ void enhancedCloud::smoothField(volScalarField& sFieldIn)
 
     while (diffusionRunTime_.loop())
     {
-        Info<< "diffusion time is: " << diffusionRunTime_.value() << endl;
-        Info<< "diffusion time index is: " << diffusionRunTime_.timeIndex() << endl;
         if (diffusionRunTime_.timeIndex() == 1)
         {
-            Info<< "First step in diffusion..." << endl;
             while (simple_.correctNonOrthogonal())
             {
                 solve(fvm::ddt(diffWorkField) - fvm::laplacian(DT, diffWorkField));
@@ -948,7 +948,7 @@ void enhancedCloud::addParticleOpenFOAM()
 {
     Pout << "Adding new OF particle... " << endl;
 
-    int maxTag = 0;
+    maxTag_ = 0;
     int i = 0;
     for
     (
@@ -958,9 +958,21 @@ void enhancedCloud::addParticleOpenFOAM()
     )
     {
         softParticle& p = pIter();
-        maxTag = max(p.ptag(),maxTag);
+        maxTag_ = max(p.ptag(),maxTag_);
     }
 
+    reduce(maxTag_, maxOp<label>());
+    
+    label myrank = Pstream::myProcNo();
+
+    forAll(addParticleLocalList_, i)
+    {
+        if (myrank > i)
+        {
+            maxTag_ += addParticleLocalList_[i];
+        }
+    }
+    
     forAll(addParticleCellID_, i)
     {
 
@@ -975,7 +987,15 @@ void enhancedCloud::addParticleOpenFOAM()
 
         // TODO: this may have problems for parallel computing
         label lmpCpuIds = 0;
-        label tags = maxTag + 1 + i;
+        forAll(lmpLocalBoxList_, boxI)
+        {
+            if (pointInBox(pos, lmpLocalBoxList_[boxI]))
+            {
+                lmpCpuIds = boxI;
+            }
+        }
+
+        label tags = maxTag_ + 1 + i;
 
         softParticle* ptr =
             new softParticle
@@ -1001,8 +1021,12 @@ void enhancedCloud::deleteParticleBeforeAdd()
 {
     if (deleteParticleOption_ > 0)
     {
-        int maxTag = 0;
+
+        label nprocs = Pstream::nProcs();
+        label myrank = Pstream::myProcNo();
+
         int i = 0;
+        int nDelete = 0;
         for
         (
             softParticleCloud::iterator pIter = begin();
@@ -1011,17 +1035,25 @@ void enhancedCloud::deleteParticleBeforeAdd()
         )
         {
             softParticle& p = pIter();
-            maxTag = max(p.ptag(),maxTag);
+            vector pPosition = p.position();
+
+            if (pointInRegion(pPosition, clearInitialBox_)) 
+            {
+                nDelete++;
+            }
         }
                                         
-        deleteBeforeAddList_.setSize(maxTag);
-        for (int i = 0; i < maxTag; i++)
+        deleteBeforeAddList_.setSize(nDelete);
+        List<labelList> deleteBeforeAddListList(nprocs);
+        labelList deletedParticleNo(nprocs, 0);
+        labelList assembleLmpCpuIdList(nDelete, 0);
+
+        for (int i = 0; i < nDelete; i++)
         {
             // TODO: this may have problem for parallel computing
             deleteBeforeAddList_[i] = 0;
         }
 
-        int nDelete = 0;
         i = 0;
         for
         (
@@ -1036,10 +1068,56 @@ void enhancedCloud::deleteParticleBeforeAdd()
             if (pointInRegion(pPosition, clearInitialBox_)) 
             {
                 // TODO: this may have problem for parallel computing
-                deleteBeforeAddList_[p.ptag() - 1] = 1;
+                deleteBeforeAddList_[i] = p.ptag();
                 deleteParticle(p);
-                nDelete++;
+
+                forAll(lmpLocalBoxList_, boxI)
+                {
+                    if (pointInBox(pPosition, lmpLocalBoxList_[boxI]))
+                    {
+                        deletedParticleNo[boxI] ++;
+                        assembleLmpCpuIdList[i] = boxI;
+                    }
+                }
             }
+        }
+
+        assembleList<labelList>
+        (
+            deleteBeforeAddList_,
+            deleteBeforeAddListList,
+            deletedParticleNo,
+            assembleLmpCpuIdList
+        );
+
+        List<labelList> toLmpDeleteTagListList(nprocs);
+
+        transposeAmongProcs<labelList> (deleteBeforeAddListList, toLmpDeleteTagListList);
+
+        label toLmpListSize = 0;
+        forAll(deleteBeforeAddListList, listI)
+        {
+            toLmpListSize += toLmpDeleteTagListList[listI].size();
+        }
+        labelList toLmpDeleteTagList(toLmpListSize, 0);
+
+        // flattenList<labelList> (toLmpDeleteTagListList, toLmpDeleteTagList);
+
+        i = 0;
+        forAll(toLmpDeleteTagListList,listI)
+        {
+            forAll(toLmpDeleteTagListList[listI], memberI)
+            {
+                toLmpDeleteTagList[i] = toLmpDeleteTagListList[listI][memberI];
+                i++;
+            }
+        }
+
+        deleteBeforeAddList_.setSize(toLmpListSize);
+        
+        forAll(deleteBeforeAddList_, i)
+        {
+            deleteBeforeAddList_[i] = toLmpDeleteTagList[i];
         }
     }
 }
@@ -1050,8 +1128,11 @@ void enhancedCloud::deleteParticleOpenFOAM()
 {
     if (deleteParticleOption_ > 0)
     {
-        int maxTag = 0;
+        label nprocs = Pstream::nProcs();
+        label myrank = Pstream::myProcNo();
+
         int i = 0;
+        int nDelete = 0;
         for
         (
             softParticleCloud::iterator pIter = begin();
@@ -1060,17 +1141,25 @@ void enhancedCloud::deleteParticleOpenFOAM()
         )
         {
             softParticle& p = pIter();
-            maxTag = max(p.ptag(),maxTag);
+            vector pPosition = p.position();
+
+            if (pointInRegion(pPosition, deleteParticleBox_)) 
+            {
+                nDelete++;
+            }
         }
-                                        
-        deleteParticleList_.setSize(maxTag);
-        for (int i = 0; i < maxTag; i++)
+ 
+        deleteParticleList_.setSize(nDelete);
+        List<labelList> deleteParticleListList(nprocs);
+        labelList deletedParticleNo(nprocs, 0);
+        labelList assembleLmpCpuIdList(nDelete, 0);
+
+        for (int i = 0; i < nDelete; i++)
         {
             // TODO: this may have problem for parallel computing
             deleteParticleList_[i] = 0;
         }
 
-        int nDelete = 0;
         i = 0;
         for
         (
@@ -1085,10 +1174,56 @@ void enhancedCloud::deleteParticleOpenFOAM()
             if (pointInRegion(pPosition, deleteParticleBox_)) 
             {
                 // TODO: this may have problem for parallel computing
-                deleteParticleList_[p.ptag() - 1] = 1;
+                deleteParticleList_[i] = p.ptag();
                 deleteParticle(p);
-                nDelete++;
+                forAll(lmpLocalBoxList_, boxI)
+                {
+                    if (pointInBox(pPosition, lmpLocalBoxList_[boxI]))
+                    {
+                        deletedParticleNo[boxI] ++;
+                        assembleLmpCpuIdList[i] = boxI;
+                    }
+                }
             }
+        }
+
+        assembleList<labelList>
+        (
+            deleteParticleList_,
+            deleteParticleListList,
+            deletedParticleNo,
+            assembleLmpCpuIdList
+        );
+
+        List<labelList> toLmpDeleteTagListList(nprocs);
+
+        transposeAmongProcs<labelList> (deleteParticleListList, toLmpDeleteTagListList);
+
+        label toLmpListSize = 0;
+        forAll(deleteParticleListList, listI)
+        {
+            toLmpListSize += toLmpDeleteTagListList[listI].size();
+        }
+
+        labelList toLmpDeleteTagList(toLmpListSize, 0);
+
+        // flattenList<labelList> (toLmpDeleteTagListList, toLmpDeleteTagList);
+
+        i = 0;
+        forAll(toLmpDeleteTagListList,listI)
+        {
+            forAll(toLmpDeleteTagListList[listI],memberI)
+            {
+                toLmpDeleteTagList[i] = toLmpDeleteTagListList[listI][memberI];
+                i++;
+            }
+        }
+
+        deleteParticleList_.setSize(toLmpListSize);
+        
+        forAll(deleteParticleList_, i)
+        {
+            deleteParticleList_[i] = toLmpDeleteTagList[i];
         }
     }
 }

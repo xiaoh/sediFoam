@@ -42,6 +42,7 @@ SourceFiles
 #include "error.H"
 #include "Pstream.H"
 #include "vectorList.H"
+#include "tensorList.H"
 
 #include "LammpsCollection.H"
 #include "softParticle.H"
@@ -125,24 +126,6 @@ class softParticleCloud
             //- Destructor of LAMMPS
             void finishLammps();
 
-            //- Convert a long list into list of lists
-            template <class DataType>
-            void assembleList
-            (
-                DataType& inList,
-                List<DataType>& outList,
-                labelList indexList,
-                labelList cpuList
-            );
-
-            //- Convert a list of lists to a longer list
-            template <class DataType>
-            void flattenList
-            (
-                List<DataType>& inList,
-                DataType& outList
-            );
-
             //- Construct OpenFOAM particles
             void initConstructParticles
             (
@@ -202,9 +185,12 @@ protected:
         tensor addParticleBox_;
         scalar addParticleTimeStep_;
         scalar timeToAddParticle_;
+        labelList addParticleLocalList_;
         labelList addParticleCellID_;
         vector addParticleInfo_;
         scalar randomPerturb_;
+        tensorList lmpLocalBoxList_;
+        label maxTag_;
 
         scalar deleteBeforeAddFlag_;
         labelList deleteBeforeAddList_;
@@ -254,6 +240,12 @@ protected:
         //  move across the processor boundary
         void setPositionCell();
 
+        //- Determine if a point is in the region
+        bool pointInRegion(vector& point, tensor& box);
+
+        //- Determine if a point is in the box
+        bool pointInBox(vector& point, tensor& box);
+
         //- Transpose the scalar of different processors
         template<class DataType>
         void transposeAmongProcs
@@ -262,8 +254,23 @@ protected:
             List<DataType>& fromEveryone
         );
 
-        //- Determine if a point is in the region
-        bool pointInRegion(vector& point, tensor& box);
+        //- Convert a long list into list of lists
+        template <class DataType>
+        void assembleList
+        (
+            DataType& inList,
+            List<DataType>& outList,
+            labelList indexList,
+            labelList cpuList
+        );
+
+        //- Convert a list of lists to a longer list
+        template <class DataType>
+        void flattenList
+        (
+            List<DataType>& inList,
+            DataType& outList
+        );
 
 public:
 

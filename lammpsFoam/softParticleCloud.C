@@ -27,6 +27,7 @@ License
 #include "softParticleCloud.H"
 #include "processorPolyPatch.H"
 #include "vectorList.H"
+#include "tensorList.H"
 #include <string.h>
 #include "mpi.h"
 using std::string;
@@ -147,8 +148,6 @@ void softParticleCloud::initLammps()
 
     Info<< "getting initial info of particles..." << endl;
     Info<< "execution time is: " << runTime_.elapsedCpuTime() << endl;
-    std::cout<< "size of xArray is: " << sizeof(xArray_) << endl;
-    std::cout<< "size of dArray is: " << sizeof(dArray_) << endl;
 
     // xArray_ etc. are local to Lammps processor
     lammps_get_initial_info
@@ -185,13 +184,25 @@ void softParticleCloud::initLammps()
     softParticle::trackingData td0(*this);
     Cloud<softParticle>::move(td0, mesh_.time().deltaTValue());
 
-    Info << "finished moving..." << endl;
     Info<< "execution time is: " << runTime_.elapsedCpuTime() << endl;
 
     lammps_step(lmp_, 0);
-    Info << "finished steping..." << endl;
+
+    double* lmpLocalBox = new double [6];
+    lammps_get_local_domain(lmp_, lmpLocalBox);
+
+    for (int i = 0; i < 6; i++)
+    {
+        lmpLocalBoxList_[myrank].component(i) = lmpLocalBox[i];
+    }
+
+    for(int i = 0; i < nprocs; i++)
+    {
+        reduce(lmpLocalBoxList_[i], sumOp<tensor>());
+    }
 
     delete [] npArray;
+    delete [] lmpLocalBox;
 }
 
 
@@ -429,6 +440,8 @@ softParticleCloud::softParticleCloud
     gamma_(alpha),
     cpuTimeSplit_(6, 0.0)
 {
+    label nprocs = Pstream::nProcs();
+
     subCycles_ = readScalar(cloudProperties_.lookup("subCycles"));
 
     // Initialize the setup of adding and deleting particles
@@ -474,6 +487,12 @@ softParticleCloud::softParticleCloud
 
     nLocal_ = 0;
 
+    lmpLocalBoxList_.setSize(nprocs);
+    forAll(lmpLocalBoxList_, i)
+    {
+        lmpLocalBoxList_[i] = tensor::zero;
+    }
+
     findAddParticleCells();
 
     // This is particularly for continuation run. After reading in
@@ -482,6 +501,7 @@ softParticleCloud::softParticleCloud
     // To be implemented.
 
     initLammps();
+    Info<< "initialization finished!" << endl;
 }
 
 
@@ -988,8 +1008,72 @@ void softParticleCloud::addNewParticles()
 {
     Pout << "Adding new particle... " << endl;
 
-    int npAdd = addParticleCellID_.size(); 
+    label nprocs = Pstream::nProcs();
+    label myrank = Pstream::myProcNo();
+
+    int npOF = addParticleCellID_.size(); 
+
+    labelList addedParticleNo(nprocs, 0);
+    labelList assembleLmpCpuIdList(npOF);
+
+    vectorList fromFoamAddPositionList(npOF);
+    List<vectorList> fromFoamAddPositionListList(nprocs);
+    labelList fromFoamAddTagList(npOF);
+    List<labelList> fromFoamAddTagListList(nprocs);
+
+    forAll(addParticleCellID_, i)
+    {
+        label cellI = addParticleCellID_[i];
+        vector pos = mesh_.C()[cellI];
+        fromFoamAddPositionList[i] = pos;
+        fromFoamAddTagList[i] = maxTag_ + 1 + i;
+        forAll(lmpLocalBoxList_, boxI)
+        {
+            if (pointInBox(pos, lmpLocalBoxList_[boxI]))
+            {
+                addedParticleNo[boxI] ++;
+                assembleLmpCpuIdList[i] = boxI;
+            }
+        }
+    }
+
+    assembleList<vectorList>
+    (
+        fromFoamAddPositionList,
+        fromFoamAddPositionListList,
+        addedParticleNo,
+        assembleLmpCpuIdList
+    );
+
+    assembleList<labelList>
+    (
+        fromFoamAddTagList,
+        fromFoamAddTagListList,
+        addedParticleNo,
+        assembleLmpCpuIdList
+    );
+
+    List<vectorList> toLmpAddPositionListList(nprocs);
+    List<labelList> toLmpAddTagListList(nprocs);
+
+    transposeAmongProcs<vectorList> (fromFoamAddPositionListList, toLmpAddPositionListList);
+    transposeAmongProcs<labelList> (fromFoamAddTagListList, toLmpAddTagListList);
+
+    label toLmpListSize = 0;
+    forAll(toLmpAddPositionListList, listI)
+    {
+        toLmpListSize += toLmpAddPositionListList[listI].size();
+    }
+    vectorList toLmpAddPositionList(toLmpListSize, vector::zero);
+    labelList toLmpAddTagList(toLmpListSize, 0);
+
+    flattenList<vectorList> (toLmpAddPositionListList, toLmpAddPositionList);
+    flattenList<labelList> (toLmpAddTagListList, toLmpAddTagList);
+
+    int npAdd = toLmpListSize;
+
     double* posArray = new double [3*npAdd];
+    double* tagArray = new double [npAdd];
 
     double ds = addParticleInfo_[0];
     double rhos = addParticleInfo_[1];
@@ -997,18 +1081,17 @@ void softParticleCloud::addNewParticles()
 
     Random perturbation(size());
 
-    forAll(addParticleCellID_, i)
+    forAll(toLmpAddPositionList, i)
     {
-        label cellI = addParticleCellID_[i];
-        vector pos = mesh_.C()[cellI];
-
-        posArray[0+3*i] = pos[0] + randomPerturb_*perturbation.GaussNormal();
-        posArray[1+3*i] = pos[1] + randomPerturb_*perturbation.GaussNormal();
-        posArray[2+3*i] = pos[2] + randomPerturb_*perturbation.GaussNormal();
+        posArray[0+3*i] = toLmpAddPositionList[i].x() + randomPerturb_*perturbation.GaussNormal();
+        posArray[1+3*i] = toLmpAddPositionList[i].y() + randomPerturb_*perturbation.GaussNormal();
+        posArray[2+3*i] = toLmpAddPositionList[i].z() + randomPerturb_*perturbation.GaussNormal();
+        tagArray[i] = toLmpAddTagList[i];
     }
     
-    lammps_create_particle(lmp_, npAdd, posArray, ds, rhos, types);
+    lammps_create_particle(lmp_, npAdd, posArray, tagArray, ds, rhos, types);
     delete [] posArray;
+    delete [] tagArray;
 }
 
 
@@ -1034,9 +1117,8 @@ void softParticleCloud::addAndDeleteParticle()
                 }
             }
                 
-            if (nDelete > 0)
+            // if (nDelete > 0)
             {
-                Info<< "deleting particle before adding..." << endl; 
                 lammps_delete_particle(lmp_, deleteList, nDelete);
             }
 
@@ -1067,9 +1149,8 @@ void softParticleCloud::addAndDeleteParticle()
             }
         }
             
-        if (nDelete > 0)
+        // if (nDelete > 0)
         {
-            Info<< "deleting particle in LAMMPS..." << endl; 
             lammps_delete_particle(lmp_, deleteList, nDelete);
         }
 
@@ -1092,6 +1173,23 @@ void softParticleCloud::findAddParticleCells()
         }
     }
 
+    label nprocs = Pstream::nProcs();
+    label myrank = Pstream::myProcNo();
+    
+    addParticleLocalList_.setSize(nprocs, 0);
+
+    for(int i = 0; i < nprocs; i++)
+    {
+        addParticleLocalList_[i] = 0;
+    }
+
+    addParticleLocalList_[myrank] = nP;
+
+    for(int i = 0; i < nprocs; i++)
+    {
+        reduce(addParticleLocalList_[i], maxOp<label>());
+    }
+
     addParticleCellID_.setSize(nP);
     int i = 0;
     forAll(mesh_.C(), cellI)
@@ -1104,8 +1202,6 @@ void softParticleCloud::findAddParticleCells()
             i++;
         }
     }
-
-    Info<< "Add " << nP << " particles each time! " << endl;
 }
 
 bool softParticleCloud::pointInRegion(vector& point, tensor& box)
@@ -1159,6 +1255,31 @@ bool softParticleCloud::pointInRegion(vector& point, tensor& box)
             }
         }
         
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+
+bool softParticleCloud::pointInBox(vector& point, tensor& box)
+{
+    scalar x1 = box.component(0);
+    scalar x2 = box.component(1);
+    scalar y1 = box.component(2);
+    scalar y2 = box.component(3);
+    scalar z1 = box.component(4);
+    scalar z2 = box.component(5);
+    
+    if
+    (
+        (point.x() - x1)*(point.x() - x2) < 0 && 
+        (point.y() - y1)*(point.y() - y2) < 0 &&
+        (point.z() - z1)*(point.z() - z2) < 0 
+    )
+    {
+        return 1;
     }
     else
     {
