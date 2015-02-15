@@ -1219,9 +1219,9 @@ bool softParticleCloud::pointInRegion(vector& point, tensor& box)
     {
         if
         (
-            (point.x() - x1)*(point.x() - x2) < 0 && 
-            (point.y() - y1)*(point.y() - y2) < 0 &&
-            (point.z() - z1)*(point.z() - z2) < 0 
+            (point.x() - x1)*(point.x() - x2) < SMALL && 
+            (point.y() - y1)*(point.y() - y2) < SMALL &&
+            (point.z() - z1)*(point.z() - z2) < SMALL 
         )
         {
             return 1;
@@ -1274,9 +1274,9 @@ bool softParticleCloud::pointInBox(vector& point, tensor& box)
     
     if
     (
-        (point.x() - x1)*(point.x() - x2) < 0 && 
-        (point.y() - y1)*(point.y() - y2) < 0 &&
-        (point.z() - z1)*(point.z() - z2) < 0 
+        (point.x() - x1)*(point.x() - x2) < SMALL && 
+        (point.y() - y1)*(point.y() - y2) < SMALL &&
+        (point.z() - z1)*(point.z() - z2) < SMALL 
     )
     {
         return 1;

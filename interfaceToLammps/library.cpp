@@ -238,7 +238,7 @@ void lammps_get_local_domain(void* ptr, double* domain_)
   domain_[3] = subhi[1];
   domain_[4] = sublo[2];
   domain_[5] = subhi[2];
-  printf("++++=A> domain in processor %5d\n is: x0 %f, y0 %f, z0 %f; x1 %f y1 %f, z1 %f.", 
+  printf("++++=A> domain in processor %5d\n is: x0 %f, x1 %f, y0 %f; y1 %f z0 %f, z1 %f.", 
           myrank, domain_[0], domain_[1], domain_[2], domain_[3], domain_[4], domain_[5]);
 }
 

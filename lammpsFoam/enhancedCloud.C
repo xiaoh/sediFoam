@@ -1059,7 +1059,7 @@ void enhancedCloud::deleteParticleBeforeAdd()
         (
             softParticleCloud::iterator pIter = begin();
             pIter != end();
-            ++pIter, ++i
+            ++pIter
         )
         {
             softParticle& p = pIter();
@@ -1069,16 +1069,11 @@ void enhancedCloud::deleteParticleBeforeAdd()
             {
                 // TODO: this may have problem for parallel computing
                 deleteBeforeAddList_[i] = p.ptag();
+                label boxI = p.pLmpCpuId();
                 deleteParticle(p);
-
-                forAll(lmpLocalBoxList_, boxI)
-                {
-                    if (pointInBox(pPosition, lmpLocalBoxList_[boxI]))
-                    {
-                        deletedParticleNo[boxI] ++;
-                        assembleLmpCpuIdList[i] = boxI;
-                    }
-                }
+                deletedParticleNo[boxI] ++;
+                assembleLmpCpuIdList[i] = boxI;
+                i++;
             }
         }
 
@@ -1165,7 +1160,7 @@ void enhancedCloud::deleteParticleOpenFOAM()
         (
             softParticleCloud::iterator pIter = begin();
             pIter != end();
-            ++pIter, ++i
+            ++pIter
         )
         {
             softParticle& p = pIter();
@@ -1175,15 +1170,11 @@ void enhancedCloud::deleteParticleOpenFOAM()
             {
                 // TODO: this may have problem for parallel computing
                 deleteParticleList_[i] = p.ptag();
+                label boxI = p.pLmpCpuId();
                 deleteParticle(p);
-                forAll(lmpLocalBoxList_, boxI)
-                {
-                    if (pointInBox(pPosition, lmpLocalBoxList_[boxI]))
-                    {
-                        deletedParticleNo[boxI] ++;
-                        assembleLmpCpuIdList[i] = boxI;
-                    }
-                }
+                deletedParticleNo[boxI] ++;
+                assembleLmpCpuIdList[i] = boxI;
+                i++;
             }
         }
 
@@ -1220,7 +1211,7 @@ void enhancedCloud::deleteParticleOpenFOAM()
         }
 
         deleteParticleList_.setSize(toLmpListSize);
-        
+
         forAll(deleteParticleList_, i)
         {
             deleteParticleList_[i] = toLmpDeleteTagList[i];
