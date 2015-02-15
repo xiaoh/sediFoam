@@ -28,5 +28,18 @@ betaPhib = betaf*phib;
       + fvc::average(beta)*gradP.flowDirection()*gradP.value() // Adding pressure gradient
     );
 
+    if (addIBMForce)
+    {
+        UbEqn -= fvm::Sp(-ibmIndicatorPtr()/ibmRelaxTime, Ub);
+    }
+
+    // // Set the velocity directly
+    // if (addIBMForce)
+    // {
+    //     vectorField zerosVelField(ibmIndicatorList.size(), Foam::vector::zero);
+    //     UbEqn.setValues(ibmIndicatorList, zerosVelField);
+    // }
+
     UbEqn.relax();
+
 }
