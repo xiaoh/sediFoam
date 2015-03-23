@@ -183,6 +183,7 @@ protected:
         //- If add any particles in the simulation
         scalar addParticleOption_;
         tensor addParticleBox_;
+        vector addParticleBoxEccentricity_;
         scalar addParticleTimeStep_;
         scalar timeToAddParticle_;
         labelList addParticleLocalList_;
@@ -197,6 +198,10 @@ protected:
         labelList deleteParticleList_;
         tensor inletBox_;
         tensor clearInitialBox_;
+
+        label totalAdd_;
+        label totalDelete_;
+        label totalDeleteBeforeAdd_;
 
 
         //- If delete any particles in the simulation

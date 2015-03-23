@@ -111,21 +111,21 @@ class enhancedCloud
         scalar particleMoveTime_;
 
         //- Whether to turn on the diffusion or not
-        label UfSmoothFlag_;
-        label UpSmoothFlag_;
-        label dragSmoothFlag_;
-        label alphaSmoothFlag_;
+        Switch UfSmoothFlag_;
+        Switch UpSmoothFlag_;
+        Switch dragSmoothFlag_;
+        Switch alphaSmoothFlag_;
 
         tensor smoothDirection_;;
 
         //- Whether to turn on the force to the particles
-        label particleDragFlag_;
-        label particlePressureGradFlag_;
-        label particleAddedMassFlag_;
-        label particleLiftForceFlag_;
-        label particleHistoryForceFlag_;
-        label lubricationFlag_;
-        scalar inletForceRatio_;
+        Switch particleDragFlag_;
+        Switch particlePressureGradFlag_;
+        Switch particleAddedMassFlag_;
+        Switch particleLiftForceFlag_;
+        Switch particleHistoryForceFlag_;
+        Switch lubricationFlag_;
+        vector inletForceRatio_;
 
     // Private Member Functions
 
@@ -185,7 +185,7 @@ public:
              IOdictionary& cloudDict,
              IOdictionary& transDict,
              scalar diffusionBandWidth,
-             scalar diffusionSteps
+             label diffusionSteps
         );
 
 

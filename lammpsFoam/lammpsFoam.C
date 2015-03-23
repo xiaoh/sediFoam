@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
 
     Info<< "\nStarting time loop\n" << endl;
     #include "liftDragCoeffs.H"
-        
+
     splitTime[1] += runTime.elapsedCpuTime() - t0;
 
     while (runTime.run())

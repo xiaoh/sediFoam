@@ -445,45 +445,64 @@ softParticleCloud::softParticleCloud
     subCycles_ = readScalar(cloudProperties_.lookup("subCycles"));
 
     // Initialize the setup of adding and deleting particles
-    addParticleOption_ = cloudProperties_.lookupOrDefault("addParticle",0);
-    deleteParticleOption_ = cloudProperties_.lookupOrDefault("deleteParticle",0);
-    deleteBeforeAddFlag_ = cloudProperties_.lookupOrDefault("deleteBeforeAdd",0);
+    addParticleOption_ = cloudProperties_.lookupOrDefault("addParticle", 0);
+    deleteParticleOption_ = cloudProperties_.lookupOrDefault("deleteParticle", 0);
+    deleteBeforeAddFlag_ = cloudProperties_.lookupOrDefault("deleteBeforeAdd", 0);
 
-    addParticleBox_ =
-        cloudProperties_.lookupOrDefault("addParticleBox", tensor::zero);
-    addParticleInfo_ =
-        cloudProperties_.lookupOrDefault("addParticleInfo", vector::zero);
-    inletBox_ =
-        cloudProperties_.lookupOrDefault("inletBox", tensor::zero);
-    clearInitialBox_ =
-        cloudProperties_.lookupOrDefault("clearInitialBox", addParticleBox_);
 
-    Info<< "clearInitialBox is: " << clearInitialBox_ << endl;
-
+    // initial the setup when adding particle
     if (addParticleOption_ > 0)
     {
         addParticleTimeStep_ =
             readScalar(cloudProperties_.lookup("addParticleTimeStep"));
+        randomPerturb_ =
+            readScalar(cloudProperties_.lookup("randomPerturb"));
+        addParticleBox_ =
+            cloudProperties_.lookupOrDefault("addParticleBox", tensor::zero);
+        addParticleBoxEccentricity_ =
+            cloudProperties_.lookupOrDefault("eccentricity", vector::zero);
+        addParticleInfo_ = cloudProperties_.lookup("addParticleInfo");
+        inletBox_ = cloudProperties_.lookupOrDefault("inletBox", tensor::zero);
+        timeToAddParticle_ = addParticleTimeStep_;
+        totalAdd_ = 0;
     }
     else
     {
         addParticleTimeStep_ = 1/SMALL;
+        randomPerturb_ = 0.0;
+        addParticleBox_ = tensor::zero;
+        addParticleInfo_ = vector::zero;
+        inletBox_ = tensor::zero;
+        addParticleBoxEccentricity_ = vector::zero;
+        timeToAddParticle_ = addParticleTimeStep_;
+        totalAdd_ = 0;
     }
 
-    if (addParticleOption_ > 0)
+    // initial the setup when deleting particle
+    if (deleteParticleOption_ > 0)
     {
-        randomPerturb_ =
-            readScalar(cloudProperties_.lookup("randomPerturb"));
+        deleteParticleBox_ =
+            cloudProperties_.lookupOrDefault("deleteParticleBox", tensor::zero);
+        totalDelete_ = 0;
     }
     else
     {
-        randomPerturb_ = 0.0;
+        deleteParticleBox_ = tensor::zero;
+        totalDelete_ = 0;
     }
 
-    timeToAddParticle_ = addParticleTimeStep_;
-
-    deleteParticleBox_ =
-        cloudProperties_.lookupOrDefault("deleteParticleBox",tensor::zero);
+    // initial the setup when clear the region where the particles are added
+    if (deleteBeforeAddFlag_ > 0)
+    {
+        clearInitialBox_ =
+            cloudProperties_.lookupOrDefault("clearInitialBox", tensor::zero);
+        totalDeleteBeforeAdd_ = 0;
+    }
+    else
+    {
+        clearInitialBox_ = tensor::zero;
+        totalDeleteBeforeAdd_ = 0;
+    }
 
     nLocal_ = 0;
 
@@ -744,13 +763,13 @@ void  softParticleCloud::lammpsEvolveForward
     if (contiguous<vector>())
     {
         // Pout<< "contiguous vector is true." << endl;
-        double* toLmpFLocalArray_ = 
+        double* toLmpFLocalArray_ =
             reinterpret_cast <double *> (&(toLmpDragList.first()));
 
-        int* toLmpFoamCpuIdLocalArray_ = 
+        int* toLmpFoamCpuIdLocalArray_ =
             reinterpret_cast <int *> (&(toLmpFoamCpuIdList.first()));
 
-        int* toLmpTagLocalArray_ = 
+        int* toLmpTagLocalArray_ =
             reinterpret_cast <int *> (&(toLmpTagList.first()));
 
         lammps_put_local_info
@@ -810,7 +829,10 @@ void  softParticleCloud::lammpsEvolveForward
     // Harvest the number of particles in each lmp cpu
     int lmpNLocal = lammps_get_local_n(lmp_);
 
-    Info<< "the number of particles in LAMMPS now is: " << lmpNLocal << endl;
+    label lmpNGlobal = lmpNLocal;
+    reduce(lmpNGlobal, sumOp<label>());
+
+    Info<< "the number of particles in LAMMPS now is: " << lmpNGlobal << endl;
 
     // Harvest more infomation from each lmp cpu
     double* fromLmpXArrayLocal = new double [3*lmpNLocal];
@@ -1006,12 +1028,12 @@ void  softParticleCloud::lammpsEvolveForward
 // Add new particles in OpenFOAM
 void softParticleCloud::addNewParticles()
 {
-    Pout << "Adding new particle... " << endl;
+    Info << "Adding new particle... " << endl;
 
     label nprocs = Pstream::nProcs();
     label myrank = Pstream::myProcNo();
 
-    int npOF = addParticleCellID_.size(); 
+    int npOF = addParticleCellID_.size();
 
     labelList addedParticleNo(nprocs, 0);
     labelList assembleLmpCpuIdList(npOF);
@@ -1083,12 +1105,22 @@ void softParticleCloud::addNewParticles()
 
     forAll(toLmpAddPositionList, i)
     {
-        posArray[0+3*i] = toLmpAddPositionList[i].x() + randomPerturb_*perturbation.GaussNormal();
-        posArray[1+3*i] = toLmpAddPositionList[i].y() + randomPerturb_*perturbation.GaussNormal();
-        posArray[2+3*i] = toLmpAddPositionList[i].z() + randomPerturb_*perturbation.GaussNormal();
+        posArray[0+3*i] =
+            toLmpAddPositionList[i].x()
+          + randomPerturb_*(0.5 - perturbation.scalar01());
+        posArray[1+3*i] =
+            toLmpAddPositionList[i].y()
+          + randomPerturb_*(0.5 - perturbation.scalar01());
+        posArray[2+3*i] =
+            toLmpAddPositionList[i].z()
+          + randomPerturb_*(0.5 - perturbation.scalar01());
         tagArray[i] = toLmpAddTagList[i];
     }
-    
+
+    label npAddGlobal = npAdd;
+    reduce(npAddGlobal, sumOp<label>());
+    totalAdd_ += npAddGlobal;
+
     lammps_create_particle(lmp_, npAdd, posArray, tagArray, ds, rhos, types);
     delete [] posArray;
     delete [] tagArray;
@@ -1116,11 +1148,12 @@ void softParticleCloud::addAndDeleteParticle()
                     nDelete++;
                 }
             }
-                
-            // if (nDelete > 0)
-            {
-                lammps_delete_particle(lmp_, deleteList, nDelete);
-            }
+
+            label npDeleteGlobal = nDelete;
+            reduce(npDeleteGlobal, sumOp<label>());
+            totalDeleteBeforeAdd_ += npDeleteGlobal;
+
+            lammps_delete_particle(lmp_, deleteList, nDelete);
 
             delete [] deleteList;
         }
@@ -1148,11 +1181,12 @@ void softParticleCloud::addAndDeleteParticle()
                 nDelete++;
             }
         }
-            
-        // if (nDelete > 0)
-        {
-            lammps_delete_particle(lmp_, deleteList, nDelete);
-        }
+
+        label npDeleteGlobal = nDelete;
+        reduce(npDeleteGlobal, sumOp<label>());
+        totalDelete_ += npDeleteGlobal;
+
+        lammps_delete_particle(lmp_, deleteList, nDelete);
 
         delete [] deleteList;
     }
@@ -1161,6 +1195,9 @@ void softParticleCloud::addAndDeleteParticle()
 //- find the CFD cell ID in which the particles are added
 void softParticleCloud::findAddParticleCells()
 {
+
+    vector testPoint = vector::zero;
+    Info << "test point: " << pointInRegion(testPoint, addParticleBox_) << endl;
 
     label nP = 0;
     forAll(mesh_.C(), cellI)
@@ -1175,7 +1212,7 @@ void softParticleCloud::findAddParticleCells()
 
     label nprocs = Pstream::nProcs();
     label myrank = Pstream::myProcNo();
-    
+
     addParticleLocalList_.setSize(nprocs, 0);
 
     for(int i = 0; i < nprocs; i++)
@@ -1196,7 +1233,7 @@ void softParticleCloud::findAddParticleCells()
     {
         vector meshC = mesh_.C()[cellI];
 
-        if (pointInRegion(meshC, addParticleBox_)) 
+        if (pointInRegion(meshC, addParticleBox_))
         {
             addParticleCellID_[i] = cellI;
             i++;
@@ -1214,14 +1251,14 @@ bool softParticleCloud::pointInRegion(vector& point, tensor& box)
     scalar z2 = box.component(5);
     scalar r1 = box.component(6);
     scalar r2 = box.component(7);
-    
-    if (addParticleOption_ == 1) 
+
+    if (addParticleOption_ == 1)
     {
         if
         (
-            (point.x() - x1)*(point.x() - x2) < SMALL && 
+            (point.x() - x1)*(point.x() - x2) < SMALL &&
             (point.y() - y1)*(point.y() - y2) < SMALL &&
-            (point.z() - z1)*(point.z() - z2) < SMALL 
+            (point.z() - z1)*(point.z() - z2) < SMALL
         )
         {
             return 1;
@@ -1237,6 +1274,12 @@ bool softParticleCloud::pointInRegion(vector& point, tensor& box)
         scalar h = mag(p2p1);
         vector pxp1 = vector(point.x() - x1, point.y() - y1, point.z() - z1);
         scalar dot = (p2p1 & pxp1);
+
+        vector p2p1E = p2p1;
+        scalar hE = mag(p2p1E);
+        vector pxp1E = pxp1 - addParticleBoxEccentricity_;
+        scalar dotE = (p2p1E & pxp1E);
+
         if (dot < 0.0 || dot > pow(h,2))
         {
             return 0;
@@ -1244,8 +1287,9 @@ bool softParticleCloud::pointInRegion(vector& point, tensor& box)
         else
         {
             scalar dsq = (pxp1 & pxp1) - dot*dot/pow(h,2);
+            scalar dsqE = (pxp1E & pxp1E) - dot*dot/pow(h,2);
 
-            if (dsq > r1*r1 && dsq < r2*r2)
+            if (dsqE > r1*r1 && dsq < r2*r2)
             {
                 return 1;
             }
@@ -1254,7 +1298,7 @@ bool softParticleCloud::pointInRegion(vector& point, tensor& box)
                 return 0;
             }
         }
-        
+
     }
     else
     {
@@ -1271,12 +1315,12 @@ bool softParticleCloud::pointInBox(vector& point, tensor& box)
     scalar y2 = box.component(3);
     scalar z1 = box.component(4);
     scalar z2 = box.component(5);
-    
+
     if
     (
-        (point.x() - x1)*(point.x() - x2) < SMALL && 
+        (point.x() - x1)*(point.x() - x2) < SMALL &&
         (point.y() - y1)*(point.y() - y2) < SMALL &&
-        (point.z() - z1)*(point.z() - z2) < SMALL 
+        (point.z() - z1)*(point.z() - z2) < SMALL
     )
     {
         return 1;

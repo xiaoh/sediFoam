@@ -214,8 +214,6 @@ int lammps_get_local_n(void* ptr)
 
   int nlocal = lammps->atom->nlocal;
 
-  printf("++++=A> nlocal is: %5d\n", nlocal);
-
   return nlocal;
 }
 
@@ -413,7 +411,6 @@ void lammps_create_particle(void* ptr, int npAdd, double* position, double* tag,
   int myrank;
   MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
 
-  printf("creating LAMMPS particles..");
   LAMMPS *lammps = (LAMMPS *) ptr;
 
   int natom = static_cast<int> (lammps->atom->natoms);
@@ -498,7 +495,6 @@ void lammps_delete_particle(void *ptr, int* deleteList, int nDelete)
   int myrank;
   MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
 
-  printf("deleting %5d LAMMPS particles..\n", nDelete);
   LAMMPS *lammps = (LAMMPS *) ptr;
   class RanPark *random = new RanPark(lammps,100);
 

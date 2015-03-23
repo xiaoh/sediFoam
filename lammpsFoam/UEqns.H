@@ -18,7 +18,7 @@ betaPhib = betaf*phib;
         )
 
         // divDevReff(U) = - laplacian(beta*U)
-      + continuousPhaseTurbulence->divDevReff(Ub) 
+      + continuousPhaseTurbulence->divDevReff(Ub)
       + continuousPhaseTurbulence->nuEff()*(fvc::grad(beta) & fvc::grad(Ub))
      ==
     //  g                        // Buoyancy term transfered to p-equation

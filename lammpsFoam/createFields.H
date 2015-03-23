@@ -123,48 +123,26 @@
     );
 
     // default diffusion band width if not defined in dictionary
-    scalar diffusionBandWidth = 0.006;
-    if (cloudProperties.found("diffusionBandWidth"))
+    scalar diffusionBandWidth =
+        cloudProperties.lookupOrDefault<scalar>("diffusionBandWidth", 0.006);
+    if (!cloudProperties.found("diffusionBandWidth"))
     {
-        diffusionBandWidth =
-            readScalar
-            (
-                cloudProperties.lookup("diffusionBandWidth")
-            );
-    }
-    else
-    {
-        Info<< "*** Diffusion band width set to 0.006 by default"
-            << endl;
+        Info<< "Diffusion band width set to 0.006 by default" << endl;
     }
 
     // default max alpha if not defined in dictionary
-    scalar maxPossibleAlpha = 0.70;
-    if (cloudProperties.found("maxPossibleAlpha"))
-    {
-        maxPossibleAlpha =
-            readScalar
-            (
-                cloudProperties.lookup("maxPossibleAlpha")
-            );
-    }
-    else
+    scalar maxPossibleAlpha =
+        cloudProperties.lookupOrDefault<scalar>("maxPossibleAlpha", 0.70);
+    if (!cloudProperties.found("maxPossibleAlpha"))
     {
         Info<< "*** Max possible alpha set to 0.70 by default"
             << endl;
     }
 
     // default diffusion steps if not defined in dictionary
-    scalar diffusionSteps = 6;
-    if (cloudProperties.found("diffusionSteps"))
-    {
-        diffusionSteps =
-            readScalar
-            (
-                cloudProperties.lookup("diffusionSteps")
-            );
-    }
-    else
+    label diffusionSteps =
+        cloudProperties.lookupOrDefault("diffusionSteps", 6);
+    if (!cloudProperties.found("diffusionSteps"))
     {
         Info<< "*** Diffusion steps set to 6 by default"
             << endl;
@@ -264,13 +242,13 @@
         (
             "ibmRelaxTime",
             transportProperties,
-            runTime.deltaT().value() * scalar(3),
+            runTime.deltaT().value()*scalar(3),
             dimTime
         )
     );
 
     DynamicList<label> ibmIndicatorList(0);
-    
+
     if (addIBMForce)
     {
         ibmIndicatorPtr.reset

@@ -70,7 +70,7 @@ Foam::softParticle::softParticle
             is.read
             (
                reinterpret_cast<char*>(&d_),
-               sizeof(mass_) + sizeof(d_)  + sizeof(positionOld_) + sizeof(UOld_) 
+               sizeof(mass_) + sizeof(d_)  + sizeof(positionOld_) + sizeof(UOld_)
              + sizeof(U_) + sizeof(moveU_) + sizeof(ensembleU_) + sizeof(type_)
              + sizeof(density_) + sizeof(tag_)  + sizeof(lmpCpuId_)
             );

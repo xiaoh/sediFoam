@@ -1,6 +1,6 @@
 Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
     << "  ClockTime = " << runTime.elapsedClockTime() << " s"
-    << "  OpenFOAM/evolve/calcTcField/diffusion/particle move = (" 
+    << "  OpenFOAM/evolve/calcTcField/diffusion/particle move = ("
     << splitTime[0] << ", "
     << splitTime[1] << ", "
     << splitTime[2] << ", "
@@ -9,7 +9,7 @@ Info<< "ExecutionTime = " << runTime.elapsedCpuTime() << " s"
     << cloud.particleMoveTime() << ") s"
     << nl << endl;
 
-Info<< "assemble/transpose/flatten/foam->lammps/lammps/lammps->foam = (" 
+Info<< "assemble/transpose/flatten/foam->lammps/lammps/lammps->foam = ("
     << cloud.cpuTimeSplit()[0] << ", "
     << cloud.cpuTimeSplit()[1] << ", "
     << cloud.cpuTimeSplit()[2] << ", "

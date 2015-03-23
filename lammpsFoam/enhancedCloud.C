@@ -151,19 +151,19 @@ void  enhancedCloud::updateDragOnParticles()
         // local pressure gradient is used though (no weighting).
         pDrag_[particleI] = vector::zero;
 
-        if (particleDragFlag_ == 1)
+        if (particleDragFlag_)
         {
             pDrag_[particleI] +=
                 Jd_[particleI]*(1.0 - pAlpha_[particleI])
                *p.Vol()*Uri_[particleI];        // Drag
         }
-        if (particlePressureGradFlag_ == 1)
+        if (particlePressureGradFlag_)
         {
             pDrag_[particleI] +=
               - gradp[p.cell()]*p.Vol();        // Buoyancy
         }
         // Added mass force
-        if (particleAddedMassFlag_ == 1)
+        if (particleAddedMassFlag_)
         {
             vector dupdt = (p.U()-p.UOld())/runTime().deltaT().value();
             if (mag(dupdt) > 100)
@@ -173,19 +173,19 @@ void  enhancedCloud::updateDragOnParticles()
             }
             pDrag_[particleI] += 0.5*rhob_*p.Vol()*(DDtUf_[p.cell()]-dupdt);
         }
-        if (particleLiftForceFlag_ == 1)
+        if (particleLiftForceFlag_)
         {
             scalar liftCoeff = 1.6;
-            pDrag_[particleI] += 
+            pDrag_[particleI] +=
                 liftCoeff*rhob_*sqrt(nub_)*sqr(p.d())
              *((Uri_[particleI])^curlU[p.cell()])
                /sqrt(mag(curlU[p.cell()]));
         }
-        if (particleHistoryForceFlag_ == 1)
+        if (particleHistoryForceFlag_)
         {
         //    unfinished
         }
-        if (lubricationFlag_ == 1)
+        if (lubricationFlag_)
         {
             scalar distMin = 0.0001*p.d();
             scalar distMax = 0.1*p.d();
@@ -194,17 +194,18 @@ void  enhancedCloud::updateDragOnParticles()
             if (distWall < distMax && distWall > distMin)
             {
                 vector normalVec = vector(0,1,0);
-                pDrag_[particleI] += 
+                pDrag_[particleI] +=
                     6*3.1416*nub_*rhob_
                    *(-pVel)/distWall*(p.d()*p.d())/4.0*normalVec;
             }
         }
-        if (inletForceRatio_ > 0)
+        if (mag(inletForceRatio_) > 0)
         {
-            if (pointInRegion(p.position(), inletBox_)) 
+            if (pointInRegion(p.position(), inletBox_))
             {
-                pDrag_[particleI] = 
-                    p.m()*(inletForceRatio_*vector(0,1,0)-p.U())/runTime().deltaT().value();
+                pDrag_[particleI] =
+                    p.m()*(inletForceRatio_-p.U())
+                   /runTime().deltaT().value();
             }
         }
 
@@ -231,20 +232,20 @@ void  enhancedCloud::updateDragOnParticles()
         Info<< "total force is: " << pDrag_[particleI] << endl;
 
 
-        if (particleLiftForceFlag_ == 1)
+        if (particleLiftForceFlag_)
         {
-            Info<< "Uri is: " << Uri_[particleI] << endl; 
-            Info<< "curlU is: " << curlU[p.cell()] << endl; 
+            Info<< "Uri is: " << Uri_[particleI] << endl;
+            Info<< "curlU is: " << curlU[p.cell()] << endl;
             Info<< "Uri x curlU is: "
-                << (Uri_[particleI]^curlU[p.cell()]) << endl; 
-            Info<< "d^2 is: " << sqr(p.d()) << endl; 
+                << (Uri_[particleI]^curlU[p.cell()]) << endl;
+            Info<< "d^2 is: " << sqr(p.d()) << endl;
 
-            Info<< "lift force is: " 
+            Info<< "lift force is: "
                 <<  1.6*rhob_*sqrt(nub_)*sqr(p.d())
                    *((Uri_[particleI])^curlU[p.cell()])
                    /sqrt(mag(curlU[p.cell()])) << endl;
         }
-        if (lubricationFlag_ == 1)
+        if (lubricationFlag_)
         {
             scalar distMin = 0.0001*p.d();
             scalar distMax = 0.1*p.d();
@@ -347,15 +348,17 @@ void enhancedCloud::calcTcFields()
         forAll(Asrc_.internalField(), ceI)
         {
             Ftotal1 +=
-                Asrc_.internalField()[ceI]*mesh_.V()[ceI]*(1 - gamma_.internalField()[ceI]);
+                Asrc_.internalField()[ceI]*mesh_.V()[ceI]
+              *(1 - gamma_.internalField()[ceI]);
         }
 
-        // TODO: Derive the conservative way of diffusion; implement, and check numerically.
+        // TODO: Derive the conservative way of diffusion;
+        // implement, and check numerically.
         // Smoothing operations
         Asrc_.internalField() =
                 Asrc_.internalField()*(1 - gamma_.internalField());
 
-        if (dragSmoothFlag_ == 1)
+        if (dragSmoothFlag_)
         {
             smoothField(Asrc_);
         }
@@ -372,7 +375,8 @@ void enhancedCloud::calcTcFields()
         forAll(Asrc_.internalField(), ceI)
         {
             Ftotal2 +=
-                Asrc_.internalField()[ceI]*mesh_.V()[ceI]*(1 - gamma_.internalField()[ceI]);
+                Asrc_.internalField()[ceI]*mesh_.V()[ceI]
+              *(1 - gamma_.internalField()[ceI]);
         }
 
         reduce(Ftotal1, sumOp<vector>());
@@ -403,7 +407,7 @@ enhancedCloud::enhancedCloud
     IOdictionary& cloudDict,
     IOdictionary& transDict,
     scalar diffusionBandWidth,
-    scalar diffusionSteps
+    label diffusionSteps
 )
 :
     softParticleCloud(U, p, Ue, nu, alpha, cloudDict),
@@ -508,7 +512,7 @@ enhancedCloud::enhancedCloud
     }
 
     // determine the time and time step in diffusion procedure
-    scalar diffusionTime = pow(diffusionBandWidth,2)/4;
+    scalar diffusionTime = pow(diffusionBandWidth, 2)/4;
     scalar diffusionDeltaT = diffusionTime/(diffusionSteps + SMALL);
 
     diffusionRunTime_.setEndTime(diffusionTime);
@@ -517,38 +521,41 @@ enhancedCloud::enhancedCloud
     Info << "diffusion time step is: " << diffusionDeltaT << endl;
 
     // determine the fields to diffuse
-    UfSmoothFlag_ = cloudProperties_.lookupOrDefault("UfSmooth",1);
-    UpSmoothFlag_ = cloudProperties_.lookupOrDefault("UpSmooth",1);
-    dragSmoothFlag_ = cloudProperties_.lookupOrDefault("dragSmooth",1);
-    alphaSmoothFlag_ = cloudProperties_.lookupOrDefault("alphaSmooth",1);
+    UfSmoothFlag_ = cloudProperties_.lookupOrDefault("UfSmooth", true);
+    UpSmoothFlag_ = cloudProperties_.lookupOrDefault("UpSmooth", true);
+    dragSmoothFlag_ = cloudProperties_.lookupOrDefault("dragSmooth", true);
+    alphaSmoothFlag_ = cloudProperties_.lookupOrDefault("alphaSmooth", true);
 
-    smoothDirection_ = 
+    smoothDirection_ =
         cloudProperties_.lookupOrDefault
         (
             "smoothDirection",
-            tensor(1.0,0,0,0,1.0,0,0,0,1.0)
+            tensor(1.0, 0, 0, 0, 1.0, 0, 0, 0, 1.0)
         );
 
     // determine the forces to add
-    particleDragFlag_ = cloudProperties_.lookupOrDefault("particleDrag",1);
+    particleDragFlag_ = cloudProperties_.lookupOrDefault("particleDrag", true);
     particlePressureGradFlag_ =
-        cloudProperties_.lookupOrDefault("particlePressureGrad",1);
+        cloudProperties_.lookupOrDefault("particlePressureGrad", true);
     particleAddedMassFlag_ =
-        cloudProperties_.lookupOrDefault("particleAddedMass",0);
+        cloudProperties_.lookupOrDefault("particleAddedMass", false);
     particleLiftForceFlag_ =
-        cloudProperties_.lookupOrDefault("particleLift",0);
+        cloudProperties_.lookupOrDefault("particleLift", false);
     particleHistoryForceFlag_ =
-        cloudProperties_.lookupOrDefault("particleHistoryForce",0);
+        cloudProperties_.lookupOrDefault("particleHistoryForce", false);
     lubricationFlag_ =
-        cloudProperties_.lookupOrDefault("lubricationForce",0);
-
-    inletForceRatio_ = 0;
+        cloudProperties_.lookupOrDefault("lubricationForce", false);
 
     if (addParticleOption_ > 0)
     {
         inletForceRatio_ =
-            readScalar(cloudProperties_.lookup("inletForce"));
+            cloudProperties_.lookupOrDefault("inletForce", vector::zero);
     }
+    else
+    {
+        inletForceRatio_ = vector::zero;
+    }
+
 
     Info<< particleDragFlag_
         << particlePressureGradFlag_
@@ -577,9 +584,9 @@ enhancedCloud::enhancedCloud
     // gamma is smoothed field since we smooth it in particleToEulerianField();
     UfSmoothed_.internalField() = Uf_.internalField();
 
-    if (UfSmoothFlag_ == 1)
+    if (UfSmoothFlag_)
     {
-        UfSmoothed_.internalField() *= 
+        UfSmoothed_.internalField() *=
             (1 - gamma_.internalField());
 
         Info<< "smooth Uf..." << endl;
@@ -612,7 +619,7 @@ void enhancedCloud::evolve()
     UfSmoothed_.internalField() = Uf_.internalField();
 
     // smooth Uf when necessary
-    if (UfSmoothFlag_ == 1)
+    if (UfSmoothFlag_)
     {
         UfSmoothed_.internalField() *=
             (1 - gamma_.internalField());
@@ -634,7 +641,7 @@ void enhancedCloud::evolve()
         // adding particles when the conditions are satisfied
         if (addParticleOption_ > 0 && timeToAddParticle_ <= 0)
         {
-            if (deleteBeforeAddFlag_ == 1)
+            if (deleteBeforeAddFlag_)
             {
                 deleteParticleBeforeAdd();
             }
@@ -715,6 +722,8 @@ void enhancedCloud::evolve()
 
     // Pout<< "After this cycle, "
     //     << size() << " local particles has been moved. " << endl;
+    Info<< "Adding/deleting statistics. adding: " << totalAdd_ << " deleting: " << totalDelete_
+        << " deleting before add: " << totalDeleteBeforeAdd_ << endl;
 }
 
 
@@ -853,11 +862,9 @@ void enhancedCloud::particleToEulerianField()
         label cellI = p.cell();
 
         // alpha field
-        gamma_.internalField()[cellI] +=
-            p.Vol();
+        gamma_.internalField()[cellI] += p.Vol();
 
-        Ue_.internalField()[cellI] +=
-            p.Vol()*p.U();
+        Ue_.internalField()[cellI] += p.Vol()*p.U();
     }
 
     gamma_.internalField() /= mesh_.V();
@@ -874,13 +881,13 @@ void enhancedCloud::particleToEulerianField()
     Ue_.internalField() /= mesh_.V();
 
     // smooth alpha and Ua field
-    if (alphaSmoothFlag_ == 1)
+    if (alphaSmoothFlag_)
     {
         Info<< "smoothing alpha flag on..." << endl;
         smoothField(gamma_);
     }
 
-    if (UpSmoothFlag_ == 1)
+    if (UpSmoothFlag_)
     {
         smoothField(Ue_);
     }
@@ -898,7 +905,8 @@ void enhancedCloud::particleToEulerianField()
 
     forAll(Ue_.internalField(), ceI)
     {
-        Utotal2 += Ue_.internalField()[ceI]*mesh_.V()[ceI]*gamma_.internalField()[ceI];
+        Utotal2 +=
+            Ue_.internalField()[ceI]*mesh_.V()[ceI]*gamma_.internalField()[ceI];
     }
 
     reduce(Utotal1, sumOp<vector>());
@@ -946,8 +954,6 @@ void enhancedCloud::assertParticleInCell()
 //- Add OpenFOAM particles
 void enhancedCloud::addParticleOpenFOAM()
 {
-    Pout << "Adding new OF particle... " << endl;
-
     maxTag_ = 0;
     int i = 0;
     for
@@ -962,7 +968,7 @@ void enhancedCloud::addParticleOpenFOAM()
     }
 
     reduce(maxTag_, maxOp<label>());
-    
+
     label myrank = Pstream::myProcNo();
 
     forAll(addParticleLocalList_, i)
@@ -972,7 +978,7 @@ void enhancedCloud::addParticleOpenFOAM()
             maxTag_ += addParticleLocalList_[i];
         }
     }
-    
+
     forAll(addParticleCellID_, i)
     {
 
@@ -1023,7 +1029,6 @@ void enhancedCloud::deleteParticleBeforeAdd()
     {
 
         label nprocs = Pstream::nProcs();
-        label myrank = Pstream::myProcNo();
 
         int i = 0;
         int nDelete = 0;
@@ -1037,12 +1042,12 @@ void enhancedCloud::deleteParticleBeforeAdd()
             softParticle& p = pIter();
             vector pPosition = p.position();
 
-            if (pointInRegion(pPosition, clearInitialBox_)) 
+            if (pointInRegion(pPosition, clearInitialBox_) && (p.ptype() == 1))
             {
                 nDelete++;
             }
         }
-                                        
+
         deleteBeforeAddList_.setSize(nDelete);
         List<labelList> deleteBeforeAddListList(nprocs);
         labelList deletedParticleNo(nprocs, 0);
@@ -1065,8 +1070,9 @@ void enhancedCloud::deleteParticleBeforeAdd()
             softParticle& p = pIter();
             vector pPosition = p.position();
 
-            if (pointInRegion(pPosition, clearInitialBox_)) 
+            if (pointInRegion(pPosition, clearInitialBox_) && (p.ptype() == 1))
             {
+                Info<< "deleting particle.." << endl;
                 // TODO: this may have problem for parallel computing
                 deleteBeforeAddList_[i] = p.ptag();
                 label boxI = p.pLmpCpuId();
@@ -1087,7 +1093,11 @@ void enhancedCloud::deleteParticleBeforeAdd()
 
         List<labelList> toLmpDeleteTagListList(nprocs);
 
-        transposeAmongProcs<labelList> (deleteBeforeAddListList, toLmpDeleteTagListList);
+        transposeAmongProcs<labelList>
+        (
+            deleteBeforeAddListList,
+            toLmpDeleteTagListList
+        );
 
         label toLmpListSize = 0;
         forAll(deleteBeforeAddListList, listI)
@@ -1109,7 +1119,7 @@ void enhancedCloud::deleteParticleBeforeAdd()
         }
 
         deleteBeforeAddList_.setSize(toLmpListSize);
-        
+
         forAll(deleteBeforeAddList_, i)
         {
             deleteBeforeAddList_[i] = toLmpDeleteTagList[i];
@@ -1124,7 +1134,6 @@ void enhancedCloud::deleteParticleOpenFOAM()
     if (deleteParticleOption_ > 0)
     {
         label nprocs = Pstream::nProcs();
-        label myrank = Pstream::myProcNo();
 
         int i = 0;
         int nDelete = 0;
@@ -1138,12 +1147,12 @@ void enhancedCloud::deleteParticleOpenFOAM()
             softParticle& p = pIter();
             vector pPosition = p.position();
 
-            if (pointInRegion(pPosition, deleteParticleBox_)) 
+            if (pointInRegion(pPosition, deleteParticleBox_) && (p.ptype() == 1))
             {
                 nDelete++;
             }
         }
- 
+
         deleteParticleList_.setSize(nDelete);
         List<labelList> deleteParticleListList(nprocs);
         labelList deletedParticleNo(nprocs, 0);
@@ -1166,8 +1175,9 @@ void enhancedCloud::deleteParticleOpenFOAM()
             softParticle& p = pIter();
             vector pPosition = p.position();
 
-            if (pointInRegion(pPosition, deleteParticleBox_)) 
+            if (pointInRegion(pPosition, deleteParticleBox_) && (p.ptype() == 1))
             {
+                Info<< "deleting particle.." << endl;
                 // TODO: this may have problem for parallel computing
                 deleteParticleList_[i] = p.ptag();
                 label boxI = p.pLmpCpuId();
@@ -1188,7 +1198,11 @@ void enhancedCloud::deleteParticleOpenFOAM()
 
         List<labelList> toLmpDeleteTagListList(nprocs);
 
-        transposeAmongProcs<labelList> (deleteParticleListList, toLmpDeleteTagListList);
+        transposeAmongProcs<labelList>
+        (
+            deleteParticleListList,
+            toLmpDeleteTagListList
+        );
 
         label toLmpListSize = 0;
         forAll(deleteParticleListList, listI)
@@ -1252,7 +1266,7 @@ void enhancedCloud::dragInfo()
     {
         softParticle& p = pIter();
 
-        if (p.cell()<0) continue;
+        if (p.cell() < 0) continue;
         dragSumField_.internalField()[p.cell()] += pDrag_[particleI];
     }
 
@@ -1266,8 +1280,8 @@ void enhancedCloud::dragInfo()
 
 void enhancedCloud::averageInfo()
 {
-    vector averageVel(0,0,0);
-    vector totalVel(0,0,0);
+    vector averageVel(vector::zero);
+    vector totalVel(vector::zero);
     label localNumber(0);
     label totalNumber(0);
 
