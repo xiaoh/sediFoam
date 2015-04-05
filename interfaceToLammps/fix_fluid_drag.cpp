@@ -42,7 +42,7 @@ FixFluidDrag::FixFluidDrag(LAMMPS *lmp, int narg, char **arg) :
   foamCpuId = NULL;
   grow_arrays(atom->nmax);
   atom->add_callback(0);
-  force_reneighbor = 1;
+  // force_reneighbor = 1;
 }
 
 /* ---------------------------------------------------------------------- */
