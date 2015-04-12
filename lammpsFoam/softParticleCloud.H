@@ -251,6 +251,10 @@ protected:
         //- Determine if a point is in the box
         bool pointInBox(vector& point, tensor& box);
 
+
+        //- The transpose data only for the neighbouring processors
+        Switch transposeNbrOnly_;
+
         //- Transpose the scalar of different processors
         template<class DataType>
         void transposeAmongProcs

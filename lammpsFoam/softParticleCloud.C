@@ -444,6 +444,9 @@ softParticleCloud::softParticleCloud
 
     subCycles_ = readScalar(cloudProperties_.lookup("subCycles"));
 
+    transposeNbrOnly_ =
+        cloudProperties_.lookupOrDefault<Switch>("transposeNbrOnly", false);
+
     // Initialize the setup of adding and deleting particles
     addParticleOption_ = cloudProperties_.lookupOrDefault("addParticle", 0);
     deleteParticleOption_ = cloudProperties_.lookupOrDefault("deleteParticle", 0);
@@ -598,7 +601,6 @@ void softParticleCloud:: transposeAmongProcs
     List<DataType>& fromEveryone
 )
 {
-
     label nprocs = Pstream::nProcs();
     label myrank = Pstream::myProcNo();
 
@@ -612,32 +614,69 @@ void softParticleCloud:: transposeAmongProcs
             << abort(FatalError);
     }
 
-    PstreamBuffers pBufs(Pstream::nonBlocking);
-
-    // send to everyone else with UOPstream (output)
-    for(int i = 0; i < nprocs; i++)
+    if (transposeNbrOnly_)
     {
-        if (i != myrank)
+        PstreamBuffers pBufsNbr(Pstream::nonBlocking);
+        const polyBoundaryMesh& patches = mesh_.boundaryMesh();
+        forAll(patches, patchI)
         {
-            UOPstream toEveryoneStream(i, pBufs);
-            toEveryoneStream << toEveryone[i];
+            const polyPatch& pp = patches[patchI];
+            if (isA<processorPolyPatch>(pp))
+            {
+                const processorPolyPatch& procPatch =
+                    refCast<const processorPolyPatch>(pp);
+
+                UOPstream toNbr(procPatch.neighbProcNo(), pBufsNbr);
+                toNbr << toEveryone[procPatch.neighbProcNo()];
+            }
         }
+
+        pBufsNbr.finishedSends();
+
+        forAll(patches, patchI)
+        {
+            const polyPatch& pp = patches[patchI];
+            if (isA<processorPolyPatch>(pp))
+            {
+                const processorPolyPatch& procPatch =
+                    refCast<const processorPolyPatch>(pp);
+
+                UIPstream fromNbr(procPatch.neighbProcNo(), pBufsNbr);
+                fromNbr >> fromEveryone[procPatch.neighbProcNo()];
+            }
+        }
+
+        fromEveryone[myrank] = toEveryone[myrank];
     }
-
-    // finish sending and block threads here
-    pBufs.finishedSends();
-
-    // receive from everyone else; copy local data residing on my proc
-    for(int i = 0; i < nprocs; i++)
+    else
     {
-        if (i != myrank)
+        PstreamBuffers pBufs(Pstream::nonBlocking);
+
+        // send to everyone else with UOPstream (output)
+        for(int i = 0; i < nprocs; i++)
         {
-            UIPstream fromEveryoneStream(i, pBufs);
-            fromEveryoneStream >> fromEveryone[i];
+            if (i != myrank)
+            {
+                UOPstream toEveryoneStream(i, pBufs);
+                toEveryoneStream << toEveryone[i];
+            }
         }
-        else
+
+        // finish sending and block threads here
+        pBufs.finishedSends();
+
+        // receive from everyone else; copy local data residing on my proc
+        for(int i = 0; i < nprocs; i++)
         {
-            fromEveryone[i] = toEveryone[i];
+            if (i != myrank)
+            {
+                UIPstream fromEveryoneStream(i, pBufs);
+                fromEveryoneStream >> fromEveryone[i];
+            }
+            else if (i == myrank)
+            {
+                fromEveryone[i] = toEveryone[i];
+            }
         }
     }
 }
