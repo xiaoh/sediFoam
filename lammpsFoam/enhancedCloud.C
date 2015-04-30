@@ -713,7 +713,10 @@ void enhancedCloud::evolve()
         updateParticleUr();
 
         // change Eulerian (mesh-based) alpha field
-        particleToEulerianField();
+        if (k == 0)
+        {
+            particleToEulerianField();
+        }
 
         delete [] XLocal;
         delete [] VLocal;
