@@ -28,6 +28,7 @@
   \*---------------------------------------------------------------------------*/
 
 #include "chPressureGrad.H"
+#include <fstream>
 
 namespace Foam {
   bool chPressureGrad::globalParamSet_ = false;
@@ -35,8 +36,13 @@ namespace Foam {
   vector chPressureGrad::flowDirection_ = vector::zero;
   dimensionedVector  chPressureGrad::Ubar_("Ubar", dimVelocity, vector::zero);
   dimensionedVector  chPressureGrad::gradPbar_("gradPbar", dimAcceleration, vector::zero);
+  dimensionedVector  chPressureGrad::varyingGradP_("varyingGradP", dimAcceleration, vector::zero);
   dimensionedVector  chPressureGrad::dpdt_("dpdt", dimAcceleration, vector::zero);
   dimensionedScalar  chPressureGrad::magUbar_ = mag(Ubar_);
+  dimensionedScalar  chPressureGrad::period_("period", dimTime, 0.0);
+  scalarList  chPressureGrad::pressureList_(0);
+
+  word chPressureGrad::varyingType_("none");
   word chPressureGrad::specifiedQuantity_("none");
 
   void  chPressureGrad::initPressureGrad(const IOdictionary& transportProperties)
@@ -94,6 +100,41 @@ namespace Foam {
           }
           
       }
+      else if(transportProperties.found("varyingGradP"))
+      {
+          varyingGradP_ = transportProperties.lookup("varyingGradP");
+          period_ = transportProperties.lookup("varyingPeriod");
+          Foam::word varyingType = transportProperties.lookup("varyingType");
+          varyingType_ = varyingType;
+          specifiedQuantity_ = word("varyingGradP");
+          dimensionedScalar maxGradP = mag(varyingGradP_);
+          maxGradP.value() += VSMALL;
+          flowDirection_ = (varyingGradP_ /maxGradP ).value();
+          chFlowMode_ = true;
+
+          std::ifstream ifs;
+          if (varyingType_ == "input")
+          {
+              double data;
+              ifs.open("in.pressure");
+              int i = 1;
+              while (ifs >> data)
+              {
+                  pressureList_.setSize(i);
+                  pressureList_[i - 1] = data;
+                  i++;
+              }
+          }
+
+
+          Info << "*********** NOTE ***********" << nl
+               << "Running in CHANNEL FLOW MODE. " << nl
+               << "varying gradP imposed!" << nl
+               << "varying type " << varyingType_ << nl
+               << "maxP = " << maxGradP.value() << nl 
+               << "****************************" << nl
+               << endl;
+      }
       else
       {
         Info << "+++++++++++ NOTE +++++++++++++"<< nl
@@ -148,6 +189,10 @@ namespace Foam {
         if(specifiedQuantity_ == "gradPbar")
         {
             value_ = mag(gradPbar_);
+        }
+        else if(specifiedQuantity_ == "varyingGradP")
+        {
+            value_ = mag(varyingGradP_);
         }
         else if(!gradPDict_.headerOk())
         {
@@ -228,6 +273,47 @@ namespace Foam {
               scalar deltaT = U_.mesh().time().value();
 
               value_ = mag(gradPbar_) + mag(dpdt_)*deltaT;
+
+              Info << solverName_ 
+                   << " current Ubar = " << magUbarStar.value() 
+                   << "  "
+                   << name_ << " = " << value_.value() << endl;
+          }
+          else if(specifiedQuantity_ == "varyingGradP")
+          {
+
+              // dimensionedScalar magUbarStar =
+              //     (flowDirection_ & U_)().weightedAverage(beta*alpha_.mesh().V());
+
+              scalar time = U_.mesh().time().value();
+              label nStep = U_.mesh().time().timeIndex();
+              scalar PI = Foam::constant::mathematical::pi;
+
+              if(varyingType_ == "sinusoidal")
+              {
+                value_ = mag(varyingGradP_)*Foam::sin(2*PI*time/(period_.value())+0.5*PI);
+              }
+              else if(varyingType_ == "square")
+              {
+                int n = round(time/period_.value()+0.5-SMALL);
+                value_ = mag(varyingGradP_)*pow(-1,n);
+              }
+              else if(varyingType_ == "input")
+              {
+                Info << "time index is: " << nStep << endl;
+                if (nStep <= pressureList_.size())
+                {
+                    value_ = mag(varyingGradP_)*(pressureList_[nStep - 1]/mag(varyingGradP_).value());
+                }
+                else
+                {
+                    value_ = 0*mag(varyingGradP_);
+                }
+              }
+              else
+              {
+                value_ = 0;
+              }
 
               Info << solverName_ 
                    << " current Ubar = " << magUbarStar.value() 

@@ -110,6 +110,13 @@ int main(int argc, char *argv[])
         t0 = runTime.elapsedCpuTime();
 
         #include "writeCPUTime.H"
+
+        if (runTime.outputTime())
+        {
+            // TODO: for debugging
+            volVectorField ggradp("gradp",fvc::grad(p));
+            ggradp.write();
+        }
     }
 
     Info<< "End\n" << endl;

@@ -159,8 +159,16 @@ void  enhancedCloud::updateDragOnParticles()
         }
         if (particlePressureGradFlag_)
         {
+            vector gradpVec = -gradp[p.cell()];
+            // if (mag(gradpVec) > 2*rhob_*9.8)
+            // {
+            //     gradpVec = -2*rhob_*vector(0,9.8,0);
+            // }
+
             pDrag_[particleI] +=
-              - gradp[p.cell()]*p.Vol();        // Buoyancy
+              vector(0,9.8,0)*rhob_*p.Vol();        // Buoyancy
+              // gradpVec*p.Vol();
+            p.ensembleU() = -gradpVec*p.Vol();
         }
         // Added mass force
         if (particleAddedMassFlag_)
