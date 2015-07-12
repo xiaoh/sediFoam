@@ -180,6 +180,9 @@ protected:
 
         IOdictionary cloudProperties_;
 
+        //- Gravity
+        vector gravity_;
+
         //- If add any particles in the simulation
         scalar addParticleOption_;
         tensor addParticleBox_;

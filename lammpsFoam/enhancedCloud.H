@@ -120,7 +120,7 @@ class enhancedCloud
 
         //- Whether to turn on the force to the particles
         Switch particleDragFlag_;
-        Switch particlePressureGradFlag_;
+        label particlePressureGradFlag_;
         Switch particleAddedMassFlag_;
         Switch particleLiftForceFlag_;
         Switch particleHistoryForceFlag_;

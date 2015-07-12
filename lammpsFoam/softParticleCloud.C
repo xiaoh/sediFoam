@@ -452,6 +452,8 @@ softParticleCloud::softParticleCloud
     deleteParticleOption_ = cloudProperties_.lookupOrDefault("deleteParticle", 0);
     deleteBeforeAddFlag_ = cloudProperties_.lookupOrDefault("deleteBeforeAdd", 0);
 
+    gravity_ = cloudProperties_.lookupOrDefault("g", vector(0,-9.8,0));
+
 
     // initial the setup when adding particle
     if (addParticleOption_ > 0)
