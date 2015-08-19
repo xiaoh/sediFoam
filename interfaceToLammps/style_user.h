@@ -41,9 +41,11 @@
 #endif
 
 #ifdef ComputeInclude
+#include "compute_gran_local.h"
 #endif
 
 #ifdef ComputeClass
+FixStyle(gran/local, ComputeGranLocal)
 #endif
 
 #ifdef DihedralInclude

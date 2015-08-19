@@ -22,13 +22,15 @@ lammpsDir=$PWD
 
 echo "Directory of LAMMPS is: " $lammpsDir
 
-# Make STUBS
+# Copy/link all the extra implementations
 cd $lammpsDir/src
 lammpsSRC=$PWD
 echo $lammpsSRC
 ln -sf $currentDir/interfaceToLammps/*.* . 
 cd $lammpsDir/src/MAKE
 ln -sf $currentDir/interfaceToLammps/MAKE/*.* .
+
+# Make STUBS 
 cd $lammpsDir/src/STUBS
 make
 cd $lammpsDir/src
@@ -38,9 +40,10 @@ make yes-GRANULAR
 make yes-KSPACE
 make yes-MANYBODY
 make yes-MOLECULE
-make yes-FLD
+make yes-FLD # lubrication
 make yes-RIGID # freeze
 make yes-MISC # deposit
+make yes-VORONOI # ??
 
 version=`uname`
 # Use different options according to different versions

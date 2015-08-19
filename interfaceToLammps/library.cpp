@@ -481,7 +481,7 @@ void lammps_create_particle(void* ptr, int npAdd, double* position, double* tag,
 
   for (int j = 0; j < lammps->modify->nfix; j++)
   {
-    int nt = lammps->update->ntimestep;
+    bigint nt = lammps->update->ntimestep;
     lammps->modify->fix[j]->next_reneighbor = nt + 1;
   }
 
@@ -604,8 +604,9 @@ void lammps_delete_particle(void *ptr, int* deleteList, int nDelete)
   // // statistics
   for (int j = 0; j < lammps->modify->nfix; j++)
   {
-    int nt = lammps->update->ntimestep;
+    bigint nt = lammps->update->ntimestep;
     lammps->modify->fix[j]->next_reneighbor = nt + 1;
+    // lammps->modify->fix[j]->force_reneighbor = 1;
   }
 
   // ndeleted += ndel;
