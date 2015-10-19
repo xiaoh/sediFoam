@@ -1296,8 +1296,8 @@ void enhancedCloud::averageInfo()
 {
     vector averageVel(vector::zero);
     vector totalVel(vector::zero);
-    label localNumber(0);
-    label totalNumber(0);
+    scalar localVolume(0);
+    scalar totalVolume(0);
 
     label particleI = 0;
     for
@@ -1309,17 +1309,17 @@ void enhancedCloud::averageInfo()
     {
         softParticle& p = pIter();
 
-        localNumber += 1;
-        totalVel += p.U();
+        localVolume += p.Vol();
+        totalVel += p.U()*p.Vol();
     }
 
     reduce(totalVel, sumOp<vector>());
-    reduce(localNumber, sumOp<label>());
-    totalNumber = localNumber;
-    averageVel = totalVel/(totalNumber+SMALL);
+    reduce(localVolume, sumOp<scalar>());
+    totalVolume = localVolume;
+    averageVel = totalVel/(totalVolume+SMALL);
 
-    Info<< "total number of particles is: " << totalNumber << endl;
-    Info<< "total velocity of particles is: " << totalVel << endl;
+    Info<< "total volume of particles is: " << totalVolume << endl;
+    Info<< "total (velocity x volume) of particles is: " << totalVel << endl;
     Info<< "average velocity of all particles is: " << averageVel << endl;
 }
 
