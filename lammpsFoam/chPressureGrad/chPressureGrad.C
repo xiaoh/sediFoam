@@ -301,14 +301,11 @@ namespace Foam {
               else if(varyingType_ == "input")
               {
                 Info << "time index is: " << nStep << endl;
-                if (nStep <= pressureList_.size())
+                while (nStep > pressureList_.size())
                 {
-                    value_ = mag(varyingGradP_)*(pressureList_[nStep - 1]/mag(varyingGradP_).value());
+                    nStep -= pressureList_.size();
                 }
-                else
-                {
-                    value_ = 0*mag(varyingGradP_);
-                }
+                value_ = mag(varyingGradP_)*(pressureList_[nStep - 1]/mag(varyingGradP_).value());
               }
               else
               {
