@@ -404,7 +404,7 @@ void lammps_set_timestep(void *ptr, double dt_i)
 /* ---------------------------------------------------------------------- */
 
 void lammps_create_particle(void* ptr, int npAdd, double* position, double* tag, 
-                            double diameter, double rho, int type)
+                            double diameter, double rho, int type, double* vel)
 {
 
   int myrank;
@@ -451,9 +451,9 @@ void lammps_create_particle(void* ptr, int npAdd, double* position, double* tag,
     lammps->atom->mask[n] = 1 | groupbit;
     lammps->atom->image[n] = ((imageint) IMGMAX << IMG2BITS) |
                              ((imageint) IMGMAX << IMGBITS) | IMGMAX;
-    lammps->atom->v[n][0] = 0.0;
-    lammps->atom->v[n][1] = 0.0;
-    lammps->atom->v[n][2] = 0.0;
+    lammps->atom->v[n][0] = vel[0];
+    lammps->atom->v[n][1] = vel[1];
+    lammps->atom->v[n][2] = vel[2];
 
     double radtmp = 0.5*diameter;
     lammps->atom->radius[n] = radtmp;

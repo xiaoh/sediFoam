@@ -999,7 +999,7 @@ void enhancedCloud::addParticleOpenFOAM()
         label cellI = addParticleCellID_[i];
         vector pos = mesh_.C()[cellI];
 
-        vector velo = vector(0,0,0);
+        vector velo = addParticleVel_;
 
         scalar ds = addParticleInfo_[0];
         scalar rhos = addParticleInfo_[1];

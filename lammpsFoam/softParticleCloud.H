@@ -188,10 +188,12 @@ protected:
         tensor addParticleBox_;
         vector addParticleBoxEccentricity_;
         scalar addParticleTimeStep_;
+        label reduceNumberFactor_;
         scalar timeToAddParticle_;
         labelList addParticleLocalList_;
         labelList addParticleCellID_;
         vector addParticleInfo_;
+        vector addParticleVel_;
         scalar randomPerturb_;
         tensorList lmpLocalBoxList_;
         label maxTag_;

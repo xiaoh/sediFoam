@@ -467,7 +467,9 @@ softParticleCloud::softParticleCloud
         addParticleBoxEccentricity_ =
             cloudProperties_.lookupOrDefault("eccentricity", vector::zero);
         addParticleInfo_ = cloudProperties_.lookup("addParticleInfo");
+        addParticleVel_ = cloudProperties_.lookupOrDefault("addParticleVelocity", vector::zero);
         inletBox_ = cloudProperties_.lookupOrDefault("inletBox", tensor::zero);
+        reduceNumberFactor_ = cloudProperties_.lookupOrDefault("reduceNumberFactor", 1);
         timeToAddParticle_ = addParticleTimeStep_;
         totalAdd_ = 0;
     }
@@ -476,10 +478,11 @@ softParticleCloud::softParticleCloud
         addParticleTimeStep_ = 1/SMALL;
         randomPerturb_ = 0.0;
         addParticleBox_ = tensor::zero;
-        addParticleInfo_ = vector::zero;
+        addParticleVel_ = vector::zero;
         inletBox_ = tensor::zero;
         addParticleBoxEccentricity_ = vector::zero;
         timeToAddParticle_ = addParticleTimeStep_;
+        reduceNumberFactor_ = 0;
         totalAdd_ = 0;
     }
 
@@ -1137,6 +1140,7 @@ void softParticleCloud::addNewParticles()
 
     double* posArray = new double [3*npAdd];
     double* tagArray = new double [npAdd];
+    double* velArray = new double [3];
 
     double ds = addParticleInfo_[0];
     double rhos = addParticleInfo_[1];
@@ -1157,14 +1161,18 @@ void softParticleCloud::addNewParticles()
           + randomPerturb_*(0.5 - perturbation.scalar01());
         tagArray[i] = toLmpAddTagList[i];
     }
+    velArray[0] = addParticleVel_[0];
+    velArray[1] = addParticleVel_[1];
+    velArray[2] = addParticleVel_[2];
 
     label npAddGlobal = npAdd;
     reduce(npAddGlobal, sumOp<label>());
     totalAdd_ += npAddGlobal;
 
-    lammps_create_particle(lmp_, npAdd, posArray, tagArray, ds, rhos, types);
+    lammps_create_particle(lmp_, npAdd, posArray, tagArray, ds, rhos, types, velArray);
     delete [] posArray;
     delete [] tagArray;
+    delete [] velArray;
 }
 
 
@@ -1240,16 +1248,44 @@ void softParticleCloud::findAddParticleCells()
     vector testPoint = vector::zero;
     Info << "test point: " << pointInRegion(testPoint, addParticleBox_) << endl;
 
-    label nP = 0;
+    // sweep all cells to see how many cells are there
+    label nCell = 0;
     forAll(mesh_.C(), cellI)
     {
         vector meshC = mesh_.C()[cellI];
 
         if (pointInRegion(meshC, addParticleBox_))
         {
-            nP++;
+            nCell++;
         }
     }
+
+    int coarseCoeff = reduceNumberFactor_;
+    int nLine = int(pow(nCell,0.5));
+
+    Info << "Total cells: " << nCell << ". ";
+
+    // sweep again to reduce the number of particles
+    // for fine mesh
+    label nP = 0;
+    int i = 0;
+    forAll(mesh_.C(), cellI)
+    {
+        vector meshC = mesh_.C()[cellI];
+
+        if (pointInRegion(meshC, addParticleBox_))
+        {
+            int nRow = i%coarseCoeff;
+            int nColumn = i/nLine;
+            if (nRow%coarseCoeff == 0 && nColumn%coarseCoeff == 0)
+            {
+                nP++;
+            }
+            i++;
+        }
+    }
+
+    Info << "Total particles to add: " << nP << endl;
 
     label nprocs = Pstream::nProcs();
     label myrank = Pstream::myProcNo();
@@ -1269,14 +1305,21 @@ void softParticleCloud::findAddParticleCells()
     }
 
     addParticleCellID_.setSize(nP);
-    int i = 0;
+    i = 0;
+    int j = 0;
     forAll(mesh_.C(), cellI)
     {
         vector meshC = mesh_.C()[cellI];
 
         if (pointInRegion(meshC, addParticleBox_))
         {
-            addParticleCellID_[i] = cellI;
+            int nRow = i%coarseCoeff;
+            int nColumn = i/nLine;
+            if (nRow%coarseCoeff == 0 && nColumn%coarseCoeff == 0)
+            {
+                addParticleCellID_[j] = cellI;
+                j++;
+            }
             i++;
         }
     }
