@@ -257,7 +257,7 @@ namespace Foam {
               gradPDict_.set(name_, value_);
               
               Info<< solverName_ 
-                  << " uncorrected Ubar = " << magUbarStar.value() 
+                  << " current uncorrected Ubar = " << magUbarStar.value() 
                   << "  "
                   << "with averaged solid volume fraction = "
                   << volAveAlpha.value() << "  "
