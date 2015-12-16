@@ -547,7 +547,7 @@ enhancedCloud::enhancedCloud
     // determine the forces to add
     particleDragFlag_ = cloudProperties_.lookupOrDefault("particleDrag", true);
     particlePressureGradFlag_ =
-        cloudProperties_.lookupOrDefault("particlePressureGrad", 0);
+        cloudProperties_.lookupOrDefault("particlePressureGrad", 1);
     particleAddedMassFlag_ =
         cloudProperties_.lookupOrDefault("particleAddedMass", false);
     particleLiftForceFlag_ =
