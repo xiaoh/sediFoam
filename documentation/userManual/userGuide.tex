@@ -137,17 +137,18 @@ The CFD-DEM solver lammpsFoam would be successfully installed on a machine with 
 Here are the steps to compile it on your linux machine:
 \begin{enumerate}
     \item Install OpenFOAM on your machine, the up-to-date lammpsFoam is supported for OpenFOAM
-        2.1.1.
+        2.3.0, 2.3.x, and 2.4.0.
     \item Copy all the files in ``InterfaceToLammps'' folder to ``lammps-1Feb14/src", or create a
         soft link of the files.
     \item Change to ``lammps-1Feb14/src/STUBS''. Use command ``make''.
     \item Change to the ``lammps-1Feb14/src'' folder. Use command ``make yes-granular'' to install
-        the granular package of LAMMPS. Add ``kspace'', ``manybody'', ``molecule'', ``fld'' as well
+        the granular package of LAMMPS. Add ``kspace'', ``manybody'', ``molecule'', ``fld'',
+        ``regid'', ``misc'' as well
         in a similar way.
     \item Go back to the ``lammps-1Feb14/src'' folder. Use command ``make shanghailinux'' to
         generate an executable file named ``lmp\_shanghailinux'' in this folder. It may take a
         while.
-    \item Stay at ``lammps-1Feb14/src'' folder. Use command ``make shlib'' to generate a new
+    \item Stay at ``lammps-1Feb14/src'' folder. Use command ``make makeshlib'' to generate a new
         ``Makefile.shlib'' file.
     \item Stay at ``lammps-1Feb14/src'' folder. Use command ``make -f Makefile.shlib shanghailinux''
         to compile LAMMPS to a dynamic library. After this step, you will see a file named
@@ -156,8 +157,9 @@ Here are the steps to compile it on your linux machine:
         in this folder. ``liblammps\_shanghailinux.so'' is the file generated in the previous step.
     \item Change to ``LammpsFoam'' folder. Use command ``wmake libso dragModels'' to compile the
         drag models. Use command ``wmake libso chPressureGrad'' to compile the pressure gradient for
-        channel flow.
-    \item Stay at the same directory. Use command ``wmake'' to compile lammpsFoam.
+        channel flow. Use command ``wmake libso lammpsFoamTurbulenceModels'' to compile the
+        turbulent models for lammpsFoam.
+    \item Stay at the same directory. Use command ``wmake'' to compile the lammpsFoam solver.
 \end{enumerate}
 
 To check if your lammpsFoam is succesfully compiled, you can:
