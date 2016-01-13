@@ -140,10 +140,12 @@ Here are the steps to compile it on your linux machine:
         2.3.0, 2.3.x, and 2.4.0.
     \item Copy all the files in ``InterfaceToLammps'' folder to ``lammps-1Feb14/src", or create a
         soft link of the files.
-    \item Change to ``lammps-1Feb14/src/STUBS''. Use command ``make''.
+    \item Copy all the files in ``InterfaceToLammps/MAKE'' folder to ``lammps-1Feb14/src/MAKE", or
+      create a soft link of the files.
+    % \item Change to ``lammps-1Feb14/src/STUBS''. Use command ``make''.
     \item Change to the ``lammps-1Feb14/src'' folder. Use command ``make yes-granular'' to install
         the granular package of LAMMPS. Add ``kspace'', ``manybody'', ``molecule'', ``fld'',
-        ``regid'', ``misc'' as well
+        ``rigid'', ``misc'' as well
         in a similar way.
     \item Go back to the ``lammps-1Feb14/src'' folder. Use command ``make shanghailinux'' to
         generate an executable file named ``lmp\_shanghailinux'' in this folder. It may take a
@@ -159,6 +161,14 @@ Here are the steps to compile it on your linux machine:
         drag models. Use command ``wmake libso chPressureGrad'' to compile the pressure gradient for
         channel flow. Use command ``wmake libso lammpsFoamTurbulenceModels'' to compile the
         turbulent models for lammpsFoam.
+    \item 10.Change to ``lammpsFoam/Make'' folder. Choose the file named ``options-*-openmpi'' (* is
+      the name of operating system called OS thereafter) according to your own OS and rename it as
+      the file named ``options''. (For example, if your OS is ubuntu, choose the file named
+      ``options-ubuntu-openmpi'' and rename it as ``options'') Then, you should modify the first
+      line which represents the  path of lammps/src directory in the ``options'' file. Default path
+      is ``LAMMPS\_DIR = ../lammps-1Feb14/src'', you should replace ``../lammps-1Feb14'' with the
+      path where you installed your own lammps package and the correct version name of your lammps
+      package.
     \item Stay at the same directory. Use command ``wmake'' to compile the lammpsFoam solver.
 \end{enumerate}
 
