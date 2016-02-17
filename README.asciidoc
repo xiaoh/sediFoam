@@ -13,7 +13,7 @@ References
 ----------
 
 [bibliography]
-- [[[Sun2016]]] R. Sun and H. Xiao. SediFoam: A general-purpose, open-source CFD-DEM solver for particle-laden flows with emphasis on sediment transport. Computers and Geosciences, 2016.
+- [[[Sun2016]]] R. Sun and H. Xiao. 'SediFoam: A general-purpose, open-source CFD-DEM solver for particle-laden flows with emphasis on sediment transport'. Computers and Geosciences, 2016.
 
 - [[[Sun2015a]]] R. Sun and H. Xiao. 'Diffusion-Based Coarse Graining in Hybrid Continuum–Discrete Solvers: Theoretical Formulation and A Priori Tests'. International Journal of Multiphase Flow, 77, 142-157, 2015. DOI: 10.1016/j.ijmultiphaseflow.2015.08.014  Also available at arxiv:1409.0001
 
