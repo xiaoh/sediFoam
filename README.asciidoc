@@ -10,7 +10,7 @@ Bug reports and comments to: Heng Xiao (hengxiao@vt.edu) +
 
 [bibliography]
 References
----------------
+----------------
 
 [bibliography]
 - [[[Sun2016]]] R. Sun and H. Xiao. SediFoam: A general-purpose, open-source CFD-DEM solver for particle-laden flows with emphasis on sediment transport. Computers and Geosciences, 2016.
