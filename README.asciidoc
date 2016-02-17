@@ -1,0 +1,25 @@
+SediFoam: A general-purpose, open-source CFD-DEM solver for particle-laden flows
+==========================================================
+Heng Xiao <hengxiao@vt.edu>
+
+
+
+SediFoam is a hybrid CFD--DEM solver for particle-laden flows based on two open-source codes: OpenFOAM, an object-oriented CFD platform by OpenCFD, and LAMMPS, a highly efficient molecular dynamics solver by Sandia National Laboratories. The algorithms used in this solver are published in Xiao and Sun <<Xiao2011>> and R.Sun and H.Xiao <<Sun2015a,Sun2015b>>. A capability demonstration of the solver is published in Sun and Xiao <<Sun2016>>. Other application include sand dune migration <<>>.
+
+Implementation: Rui Sun (2013-present), Heng Xiao (2008-present) +
+With contribution from: Jin Sun (2008-2010), Prashant Gupta +
+Bug reports and comments to: Heng Xiao (hengxiao@vt.edu) +
+
+[bibliography]
+References
+----------
+
+- [[[Sun2016]]] R. Sun and H. Xiao. SediFoam: A general-purpose, open-source CFD-DEM solver for particle-laden flows with emphasis on sediment transport. Computers and Geosciences, 2016.
+
+- [[[Sun2015a]]] R. Sun and H. Xiao. 'Diffusion-Based Coarse Graining in Hybrid Continuum–Discrete Solvers: Theoretical Formulation and A Priori Tests'. International Journal of Multiphase Flow, 77, 142-157, 2015. DOI: 10.1016/j.ijmultiphaseflow.2015.08.014  Also available at arxiv:1409.0001
+
+- [[[Sun2015b]]] R. Sun and H. Xiao. 'Diffusion-Based Coarse Graining in Hybrid Continuum–Discrete Solvers: Applications in CFD–DEM'. International Journal of Multiphase Flow, 72, 233-247, 2015. DOI: 10.1016/j.ijmultiphaseflow.2015.02.014  Also available at arxiv:1409.0022
+
+- [[[Xiao2011]]] H. Xiao and J. Sun. 'Algorithms in a robust hybrid CFD–DEM solver for particle-laden flows'. Communications in Computational Physics, 9(2), 297-323, 2011. DOI: 10.4208/cicp.260509.230210a
+
+- [[[Sun2016b]]] R. Sun* and H. Xiao. 'CFD-DEM simulations of current-induced dune formation and morphological evolution'. Submitted, 2015. Also available at: arxiv: 1510.07201
