@@ -1,18 +1,16 @@
 SediFoam: A general-purpose, open-source CFD-DEM solver for particle-laden flows
-==========================================================
+---------------------------------------------------------------------------------
 Heng Xiao <hengxiao@vt.edu>
 
+SediFoam is a hybrid CFD--DEM solver for particle-laden flows based on two open-source codes: OpenFOAM, an object-oriented CFD platform by OpenCFD, and LAMMPS, a highly efficient molecular dynamics solver by Sandia National Laboratories. The algorithms used in this solver are published in Xiao and Sun <<Xiao2011>> and R.Sun and H.Xiao <<Sun2015a,Sun2015b>>. A capability demonstration of the solver is published in Sun and Xiao <<Sun2016>>. Other application include sand dune migration <<Sun2016b>>.
 
-
-SediFoam is a hybrid CFD--DEM solver for particle-laden flows based on two open-source codes: OpenFOAM, an object-oriented CFD platform by OpenCFD, and LAMMPS, a highly efficient molecular dynamics solver by Sandia National Laboratories. The algorithms used in this solver are published in Xiao and Sun <<Xiao2011>> and R.Sun and H.Xiao <<Sun2015a,Sun2015b>>. A capability demonstration of the solver is published in Sun and Xiao <<Sun2016>>. Other application include sand dune migration <<>>.
-
-Implementation: Rui Sun (2013-present), Heng Xiao (2008-present) +
-With contribution from: Jin Sun (2008-2010), Prashant Gupta +
+Development: Rui Sun (2013-present), Heng Xiao (2008-present), Jin Sun (2008-2010) +
+With contributions from: Prashant Gupta +
 Bug reports and comments to: Heng Xiao (hengxiao@vt.edu) +
 
 [bibliography]
 References
-----------
+---------------
 
 [bibliography]
 - [[[Sun2016]]] R. Sun and H. Xiao. SediFoam: A general-purpose, open-source CFD-DEM solver for particle-laden flows with emphasis on sediment transport. Computers and Geosciences, 2016.
