@@ -5,7 +5,8 @@ EXE_INC = \
     -I$(PWD)/include \
     -I$(LAMMPS_DIR)/   \
     -I$(LAMMPS_DIR)/GRANULAR   \
-    -I/usr/include/openmpi-x86_64/ \
+//    -I/usr/include/openmpi-x86_64/ \
+    -I/usr/include/openmpi/ \
     -I/usr/lib64/openmpi/lib/ \
     -I$(LAMMPS_DIR)/Obj_shanghailinux   \
     -I$(FOAM_SRC)/lagrangian/basic/lnInclude \

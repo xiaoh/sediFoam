@@ -1,0 +1,7 @@
+buoyantSediFoam.C
+softParticle.C
+softParticleIO.C
+softParticleCloud.C
+enhancedCloud.C
+
+EXE = $(FOAM_USER_APPBIN)/buoyantSediFoam

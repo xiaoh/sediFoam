@@ -1,4 +1,4 @@
-//LAMMPS_DIR = ../lammps-1Feb14/src
+LAMMPS_DIR = /home/riser/lammps/src
 
 EXE_INC = \
     -I$lammpsFoamTurbulenceModels/include \

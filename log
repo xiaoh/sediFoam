@@ -1,0 +1,23 @@
+Installing lammpsFoam (for mac/linux)..
+Enter the directory of your LAMMPS and press [ENTER] 
+(default directory ./lammps-1Feb14): Directory of LAMMPS is:  /home/riser/lammps
+/home/riser/lammps/src
+ar rs libmpi_stubs.a mpi.o
+Installing package GRANULAR
+Installing package KSPACE
+Installing package MANYBODY
+Installing package MOLECULE
+Package FLD does not exist
+Installing package RIGID
+Installing package MISC
+Installing package VORONOI
+The version you choose is openmpi version
+make[1]: Entering directory `/home/riser/lammps/src/Obj_shanghailinux'
+make[1]: Leaving directory `/home/riser/lammps/src/Obj_shanghailinux'
+make[1]: Entering directory `/home/riser/lammps/src/Obj_shanghailinux'
+mpic++ -O2 -funroll-loops -fstrict-aliasing -Wall -W -Wno-uninitialized  -DLAMMPS_GZIP -I../../lib/voronoi/includelink       -c ../compute_gran_local.cpp
+make[1]: Leaving directory `/home/riser/lammps/src/Obj_shanghailinux'
+'/home/riser/OpenFOAM/riser-v3.0+/platforms/linux64GccDPInt32Opt/lib/libLagrangianInterfacialModels.so' is up to date.
+'/home/riser/OpenFOAM/riser-v3.0+/platforms/linux64GccDPInt32Opt/lib/libchPressureGrad-DEM.so' is up to date.
+'/home/riser/OpenFOAM/riser-v3.0+/platforms/linux64GccDPInt32Opt/lib/liblammpsFoamTurbulenceModels.so' is up to date.
+g++ -m64 -Dlinux64 -DWM_ARCH_OPTION=64 -DWM_DP -DWM_LABEL_SIZE=32 -Wall -Wextra -Wold-style-cast -Wnon-virtual-dtor -Wno-unused-parameter -Wno-invalid-offsetof -O3  -DNoRepository -ftemplate-depth-100 -IammpsFoamTurbulenceModels/include -I/home/riser/OpenFOAM/riser-v3.0+/applications/sediFoam/lammpsFoam/include -I/home/riser/lammps/src/ -I/home/riser/lammps/src/GRANULAR -I/usr/lib/openmpi/include -I/usr/lib/openmpi/lib -I/home/riser/lammps/src/Obj_shanghailinux -I/home/riser/OpenFOAM/OpenFOAM-v3.0+/src/lagrangian/basic/lnInclude -I/home/riser/OpenFOAM/OpenFOAM-v3.0+/src/meshTools/lnInclude -I/home/riser/OpenFOAM/OpenFOAM-v3.0+/src/cfdTools/incompressible -I/home/riser/OpenFOAM/OpenFOAM-v3.0+/src/cfdTools/general/lnInclude -I/home/riser/OpenFOAM/OpenFOAM-v3.0+/src/finiteVolume/lnInclude -I/home/riser/OpenFOAM/OpenFOAM-v3.0+/src/triSurface/lnInclude -IchPressureGrad/lnInclude -I/home/riser/OpenFOAM/OpenFOAM-v3.0+/src/transportModels -I/home/riser/OpenFOAM/OpenFOAM-v3.0+/src/transportModels/incompressible/singlePhaseTransportModel -I/home/riser/OpenFOAM/OpenFOAM-v3.0+/src/TurbulenceModels/turbulenceModels/lnInclude -I/home/riser/OpenFOAM/OpenFOAM-v3.0+/src/TurbulenceModels/incompressible/lnInclude -I/home/riser/OpenFOAM/OpenFOAM-v3.0+/src/TurbulenceModels/phaseIncompressible/lnInclude -IdragModels/lnInclude -IlnInclude -I. -I/home/riser/OpenFOAM/OpenFOAM-v3.0+/src/OpenFOAM/lnInclude -I/home/riser/OpenFOAM/OpenFOAM-v3.0+/src/OSspecific/POSIX/lnInclude   -fPIC -c lammpsFoam.C -o Make/linux64GccDPInt32Opt/lammpsFoam.o

@@ -1,3 +1,4 @@
+LAMMPS_DIR =/home/riser/lammps/src
 //LAMMPS_DIR = ../lammps-1Feb14/src
 
 EXE_INC = \

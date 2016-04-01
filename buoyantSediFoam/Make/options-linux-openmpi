@@ -1,12 +1,12 @@
-//LAMMPS_DIR = ../lammps-1Feb14/src
+/*LAMMPS_DIR = ../lammps-1Feb14/src*/
 
 EXE_INC = \
     -I$lammpsFoamTurbulenceModels/include \
     -I$(PWD)/include \
     -I$(LAMMPS_DIR)/   \
     -I$(LAMMPS_DIR)/GRANULAR   \
-    -I/usr/lib/openmpi/include \
-    -I/usr/lib/openmpi/lib \
+    -I/usr/include/openmpi-x86_64/ \
+    -I/usr/lib64/openmpi/lib/ \
     -I$(LAMMPS_DIR)/Obj_shanghailinux   \
     -I$(FOAM_SRC)/lagrangian/basic/lnInclude \
     -I$(FOAM_SRC)/meshTools/lnInclude \
@@ -25,11 +25,12 @@ EXE_INC = \
 EXE_LIBS = \
     -L$(FOAM_USER_LIBBIN) \
     -L$(LAMMPS_DIR) \
+    -L$(LAMMPS_DIR)/STUBS \
     -lLagrangianInterfacialModels  \
     -lfiniteVolume \
     -lmeshTools  \
     -llagrangian \
-    -L/usr/lib/openmpi/lib -lmpi -lmpi_cxx \	    
+    -L/usr/lib64/openmpi/lib/ -lmpi -lmpi_cxx\
     -llammps_shanghailinux \
     -ltriSurface \
     -lchPressureGrad-DEM \

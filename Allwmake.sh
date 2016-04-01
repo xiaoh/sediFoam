@@ -71,6 +71,18 @@ then
     touch Make/options
     echo "LAMMPS_DIR ="$lammpsSRC > Make/options
     cat Make/options-mac-openmpi >> Make/options
+elif [ $version == "Ubuntu" ]
+then
+    echo "The version you choose is ubuntu version"
+    make shanghailinux
+    make makeshlib
+    make -f Makefile.shlib shanghailinux
+    cd $FOAM_USER_LIBBIN
+    ln -sf $lammpsDir/src/liblammps_shanghailinux.so .
+    cd $currentDir/lammpsFoam
+    touch Make/options
+    echo "LAMMPS_DIR ="$lammpsSRC > Make/options
+    cat Make/options-ubuntu-openmpi >> Make/options
 else
     echo "Sorry, we haven't got the required version."
     echo "Please contact the developer (sunrui@vt.edu) for help."
