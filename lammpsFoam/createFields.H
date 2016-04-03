@@ -242,8 +242,8 @@
         (
             "ibmRelaxTime",
             transportProperties,
-            runTime.deltaT().value()*scalar(3),
-            dimTime
+            dimTime,
+            runTime.deltaT().value()*scalar(3)
         )
     );
 
