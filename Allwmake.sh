@@ -45,7 +45,8 @@ make yes-RIGID # freeze
 make yes-MISC # deposit
 make yes-VORONOI # ??
 
-version=`uname`
+#version=`uname`
+version=`grep DISTRIB_ID /etc/*-release | awk -F '=' '{print $2}'`
 # Use different options according to different versions
 if [ $version == "Linux" ]
 then
@@ -59,6 +60,21 @@ then
     touch Make/options
     echo "LAMMPS_DIR ="$lammpsSRC > Make/options
     cat Make/options-linux-openmpi >> Make/options
+elif [ $version == "Ubuntu" ]
+then
+    echo "The version you choose is ubuntu version"
+    echo "WARNING: voro++ is required. Check $lammpsDir/lib/voronoi/README"
+    echo "WARNING: pre-installation packages for LAMMPS are required. Check its latest user manual for details."
+#    ln COLLOID/*.* .
+    make shanghailinux
+    make mode=shlib shanghailinux
+    make -f Makefile.shlib shanghailinux
+    cd $FOAM_USER_LIBBIN
+    ln -sf $lammpsDir/src/liblammps_shanghailinux.so .
+    cd $currentDir/lammpsFoam
+    touch Make/options
+    echo "LAMMPS_DIR ="$lammpsSRC > Make/options
+    cat Make/options-ubuntu-openmpi >> Make/options
 elif [ $version == "Darwin" ]
 then
     echo "The version you choose is mac version"

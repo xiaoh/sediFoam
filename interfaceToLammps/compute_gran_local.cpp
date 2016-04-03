@@ -155,7 +155,8 @@ int ComputeGranLocal::compute_pairs(int flag)
 
   // invoke half neighbor list (will copy or build if necessary)
 
-  if (flag == 0) neighbor->build_one(list->index);
+//  if (flag == 0) neighbor->build_one(list->index);
+  if (flag == 0) neighbor->build_one(list);
 
   inum = list->inum;
   ilist = list->ilist;
