@@ -1,0 +1,30 @@
+SediFoam: A general-purpose, open-source CFD-DEM solver for particle-laden flows
+---------------------------------------------------------------------------------
+Heng Xiao <hengxiao@vt.edu>
+
+SediFoam is a hybrid CFD--DEM solver for particle-laden flows based on two open-source codes: OpenFOAM, an object-oriented CFD platform by OpenCFD, and LAMMPS, a highly efficient molecular dynamics solver by Sandia National Laboratories. The algorithms used in this solver are published in Xiao and Sun <<Xiao2011>>, Sun and Xiao <<Sun2015a>>, <<Sun2015b>>, and Gupta et al.<<Gupta2015a>>. The solver has ben rigorously and extensively validated <<Gupta2015b>>. A capability demonstration of the present solver in the context of sediment transport is published in Sun and Xiao <<Sun2016>>. Other application include sand dune migration <<Sun2016b>>.
+
+More information can be found at the https://github.com/xiaoh/sediFoam/wiki[wiki pages] of this site.
+
+Development: Rui Sun (2013-present), Heng Xiao (2008-present), Jin Sun (2008-2010) +
+With contributions from: Prashant Gupta +
+Send bug reports and comments to: Heng Xiao (hengxiao@vt.edu) +
+
+[bibliography]
+References
+----------
+
+[bibliography]
+- [[[Sun2016]]] R. Sun and H. Xiao. 'SediFoam: A general-purpose, open-source CFD-DEM solver for particle-laden flows with emphasis on sediment transport'. Computers and Geosciences, 89, 207-219, 2016. https://doi.org/10.1016/j.cageo.2016.01.011[DOI:10.1016/j.cageo.2016.01.011]
+
+- [[[Sun2015a]]] R. Sun and H. Xiao. 'Diffusion-Based Coarse Graining in Hybrid Continuum–Discrete Solvers: Theoretical Formulation and A Priori Tests'. International Journal of Multiphase Flow, 77, 142-157, 2015. https://doi.org/10.1016/j.ijmultiphaseflow.2015.08.014[DOI:10.1016/j.ijmultiphaseflow.2015.08.014]. Also available at http://arxiv.org/abs/1409.0001[arxiv:1409.0001]
+
+- [[[Sun2015b]]] R. Sun and H. Xiao. 'Diffusion-Based Coarse Graining in Hybrid Continuum–Discrete Solvers: Applications in CFD–DEM'. International Journal of Multiphase Flow, 72, 233-247, 2015. https://doi.org/10.1016/j.ijmultiphaseflow.2015.02.014[DOI:10.1016/j.ijmultiphaseflow.2015.02.014]. Also available at http://arxiv.org/abs/1409.0022[arxiv:1409.0022]
+
+- [[[Xiao2011]]] H. Xiao and J. Sun. 'Algorithms in a robust hybrid CFD–DEM solver for particle-laden flows'. Communications in Computational Physics, 9(2), 297-323, 2011. https://doi.org/10.4208/cicp.260509.230210a[DOI: 10.4208/cicp.260509.230210a]. Full text also available on https://www.researchgate.net/publication/228467581_Algorithms_in_a_Robust_Hybrid_CFD-DEM_Solver_for_Particle-Laden_Flows[ResearchGate].
+
+- [[[Sun2016b]]] R. Sun and H. Xiao. 'CFD-DEM simulations of current-induced dune formation and morphological evolution'. Advances in Water Resources, 2016. https://doi.org/10.1016/j.advwatres.2016.03.018[doi:10.1016/j.advwatres.2016.03.018]. Also available at: http://arxiv.org/abs/1510.07201[arxiv:1510.07201]
+
+- [[[Gupta2015a]]] Gupta, Prashant, J. Sun, and J. Y. Ooi. 'DEM-CFD simulation of a dense fluidized bed: Wall boundary and particle size effects'. Powder Technology, 2015. https://doi.org/10.1016/j.powtec.2015.11.050[DOI:10.1016/j.powtec.2015.11.050]
+
+- [[[[Gupta2015b]]] Gupta, Prashant. 'Verification and validation of a DEM-CFD model and multiscale modelling of cohesive fluidization regimes'. Ph.D. Thesis, Edinburgh Univeristy, 2015. https://www.era.lib.ed.ac.uk/handle/1842/10449[Download from UoE Archive]
