@@ -1,0 +1,13 @@
+ sphere data
+
+        2    atoms
+        2    atom types
+
+ -0.15 0.15  xlo xhi
+  0.00 0.30  ylo yhi
+ -0.15 0.15  zlo zhi
+
+ Atoms
+
+ 1 1 0.0005 2500 0.0 0.015 0.0
+ 2 1 0.0005 2500 0.0 0.135 0.0

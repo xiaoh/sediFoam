@@ -1,0 +1,63 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  1.0                                   |
+|   \\  /    A nd           | Web:      http://www.openfoam.org               |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+
+FoamFile
+{
+    version         2.0;
+    format          ascii;
+
+    root            "";
+    case            "";
+    instance        "";
+    local           "";
+
+    class           dictionary;
+    object          sprayProperties;
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+interpolationSchemes
+{
+    U               cellPointFace;
+}
+
+g 		    (0 -9.8 0);
+
+dragModel   SyamlalOBrien;
+subCycles	1;
+// diffusionSteps 3;
+diffusionSteps 3;
+diffusionBandWidth 0.0005;
+maxPossibleAlpha 0.8;
+
+// flags for various forces
+// drag, pressure gradient, lift, added mass
+// 1-yes/0-no
+particleDrag            1;
+particlePressureGrad    1;
+particleLift            1;
+particleAddedMass       0; // may have numerical issue
+lubricationForce        0; // not applicable (only used in testing)
+particleHistoryForce    0; // not applicable
+
+// flags for the fields to average
+// Uf, Up, drag, alpha
+// 1-yes/0-no
+UfSmooth    0;
+UpSmooth    1;
+dragSmooth  1;
+alphaSmooth 1;
+
+// the vector for averaging
+// 4*bandwidth in x-axis; 2*bandwidth in y-axis; 4*bandwidth in z-axis
+// bandwidth is defined in line 36
+smoothDirection (4.0 0 0 0 2.0 0 0 0 4.0);
+
+
+// ************************************************************************* //

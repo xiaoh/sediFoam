@@ -1,0 +1,52 @@
+# 2D particle pipe simulation
+
+atom_style	sphere
+atom_modify	map array
+boundary	pp ff pp
+newton		off
+
+communicate single vel yes
+read_data 	In_initial.in
+
+neighbor	0.0005 bin
+neigh_modify	delay 0
+
+# pair_style  none
+pair_style  gran/hooke/history 20.0 NULL 7910 NULL 0.4 0
+pair_coeff  * *
+timestep	5e-6
+
+group       bottom type 2
+group       active subtract all bottom
+
+velocity    all set 0.0 0.0 0.0 units box
+
+fix		1 active nve/sphere  
+fix		2 active gravity 9.8 vector 0 -1 0 # spherical 90.0 -180.0    
+fix     3 active fdrag
+
+fix  ywall all wall/gran 20.0 NULL 7910 NULL 0.4 0 yplane -0.01 0.014
+
+## The comments below are some post processing commands, they may not work appropriately if the
+## libaries are not correctly compiled
+##
+## compute 1 all gran/local tag1 tag2 eng dist force fx fy fz
+## compute 5 all coord/atom 0.0005 #distance between the centers
+## compute 6 all stress/atom pair
+## compute 7 all stress/atom ke
+## 
+## compute vor all voronoi/atom
+## 
+## 
+## dump contact all local 2000 dump.contact index c_1[1] c_1[2] c_1[3] c_1[4] c_1[5] c_1[6] c_1[7] c_1[8]
+## dump location all custom 2000 dump.location id type x y z vx vy vz
+## dump other all custom 2000 dump.other id c_5 c_6[1] c_6[2] c_6[3] c_7[1] c_7[2] c_7[3]
+## 
+## dump p3c all local 2000 dump_pour.p3c c_1[1] c_1[2] c_1[6] c_1[7] c_1[8]
+## dump snap all custom 2000 snapshot.bubblemd id type x y z vx vy vz c_6[1] c_6[2] c_6[3] c_7[1] c_7[2] c_7[3] c_5 fx fy fz c_vor[1] c_vor[2]
+
+thermo_style  one   # granular does not work
+thermo		2000
+thermo_modify	lost error
+
+

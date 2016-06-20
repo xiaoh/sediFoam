@@ -1,0 +1,74 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  1.0                                   |
+|   \\  /    A nd           | Web:      http://www.openfoam.org               |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+
+FoamFile
+{
+    version         2.0;
+    format          ascii;
+
+    root            "";
+    case            "";
+    instance        "";
+    local           "";
+
+    class           dictionary;
+    object          sprayProperties;
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+interpolationSchemes
+{
+    U               cellPointFace;
+}
+
+g 		    (0 9.81 0);
+
+dragModel   SyamlalOBrien;
+subCycles	1;
+diffusionSteps 3;
+diffusionBandWidth 0.0005;
+maxPossibleAlpha 0.8;
+
+particleDrag            1;
+particlePressureGrad    1;
+particleAddedMass       0;
+lubricationForce        0;
+particleLift            0;
+particleHistoryForce    0;
+
+UfSmooth    0;
+UpSmooth    1;
+dragSmooth  1;
+alphaSmooth 1;
+
+smoothDirection (1.5 0 0 0 3.0 0 0 0 1.5);
+
+addParticle 1; // no/box/cylinder
+deleteParticle 1;
+// deleteBeforeAdd 1;
+// reduceNumberFactor 1;
+// inletForce              (0 2 0);
+
+// addParticleBox (-0.002 0.002 0.005 0.007 -0.002 0.002 0 0 0); // x1x2y1y2z1z2;
+// // clearInitialBox (-0.15 0.15 0.0 0.08 -0.15 0.15 0 0 0); // x1x2y1y2z1z2r1r2;
+// inletBox (-0.15 0.15 0.005 0.007 -0.15 0.15 0 0 0); // x1x2y1y2z1z2r1r2;
+
+addParticleBox (-0.0025 0.0025 0.005 0.007 -0.0025 0.0025 0 0 0); // x1x2y1y2z1z2;
+// clearInitialBox (-0.15 0.15 0.0 0.08 -0.15 0.15 0 0 0); // x1x2y1y2z1z2r1r2;
+inletBox (-0.15 0.15 0.005 0.007 -0.15 0.15 0.0001 0.002 0); // x1x2y1y2z1z2r1r2;
+
+addParticleTimeStep 0.0025;
+addParticleInfo (0.0005 2650 1); //diameter/rho/type
+addParticleVelocity (0 1.72 0); //diameter/rho/type
+randomPerturb 0.0001;
+
+deleteParticleBox (-0.15 0.15 0.28 0.30 -0.15 0.15 0 0 0); // x1x2y1y2z1z2;
+
+
+// ************************************************************************* //
