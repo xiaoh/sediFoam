@@ -312,7 +312,7 @@ void lammps_get_local_info(void* ptr, double* coords_, double* velos_,
 // Provide particle info (incl. coordinate, velocity etc.) to Foam
 // Note: MPI communication occurs!
 void lammps_put_local_info(void* ptr, int nLocalIn, double* fdrag, 
-                           int* foamCpuIdIn, int* tagIn)
+                           double* DuDt, int* foamCpuIdIn, int* tagIn)
 {
 
   LAMMPS *lammps = (LAMMPS *) ptr;

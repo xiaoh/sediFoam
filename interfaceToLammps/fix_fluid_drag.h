@@ -28,6 +28,8 @@ namespace LAMMPS_NS {
 class FixFluidDrag : public Fix {
  public:
   double **ffluiddrag;
+  double **DuDt;
+  double **vOld;
   int *foamCpuId;
 
   FixFluidDrag(class LAMMPS *, int, char **);
@@ -45,6 +47,7 @@ class FixFluidDrag : public Fix {
   int unpack_exchange(int, double *);
 
  private:
+  double carrier_rho;
 
 };
 
