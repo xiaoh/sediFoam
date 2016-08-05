@@ -62,10 +62,12 @@ FixStyle(gran/local, ComputeGranLocal)
 
 #ifdef FixInclude
 #include "fix_fluid_drag.h"
+#include "fix_cohesive.h"
 #endif
 
 #ifdef FixClass
 FixStyle(fdrag, FixFluidDrag)
+FixStyle(cohesive,FixCohe)
 #endif
 
 #ifdef ImproperInclude
