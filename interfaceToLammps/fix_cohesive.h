@@ -42,10 +42,11 @@ class FixCohe : public Fix {
   double smax; //maximum seperatioin for force cutoff
    void compute_local();
 
- private:
   double ah; //Hammaker constant
   double lam; // London retardation wavelength
   double smin; //minimum separation
+
+ private:
   int opt; //option for cohesive force model
   int nlevels_respa;
   int nmax, nvalues;

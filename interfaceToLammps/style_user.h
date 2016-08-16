@@ -42,10 +42,12 @@
 
 #ifdef ComputeInclude
 #include "compute_gran_local.h"
+#include "compute_cohe_local.h"
 #endif
 
 #ifdef ComputeClass
 FixStyle(gran/local, ComputeGranLocal)
+FixStyle(cohe/local, ComputeCoheLocal)
 #endif
 
 #ifdef DihedralInclude
