@@ -13,6 +13,7 @@ EXE_INC = \
     -I$(LIB_SRC)/cfdTools/incompressible \
     -I$(LIB_SRC)/cfdTools/general/lnInclude \
     -I$(LIB_SRC)/finiteVolume/lnInclude     \
+    -I$(LIB_SRC)/randomProcesses/lnInclude     \
     -I$(LIB_SRC)/triSurface/lnInclude     \
     -IchPressureGrad/lnInclude \
     -I$(LIB_SRC)/transportModels \
@@ -25,9 +26,9 @@ EXE_INC = \
 EXE_LIBS = \
     -L$(FOAM_USER_LIBBIN) \
     -L$(LAMMPS_DIR) \
-    -L$(LAMMPS_DIR)/STUBS \
     -lLagrangianInterfacialModels  \
     -lfiniteVolume \
+    -lrandomProcesses \
     -lmeshTools  \
     -llagrangian \
     -L/usr/lib64/openmpi/lib/ -lmpi -lmpi_cxx\
