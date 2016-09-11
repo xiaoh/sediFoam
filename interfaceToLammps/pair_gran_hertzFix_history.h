@@ -11,47 +11,38 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
-// added by Rui Sun
-#ifdef FIX_CLASS
+#ifdef PAIR_CLASS
 
-FixStyle(fdrag,FixFluidDrag)
+PairStyle(gran/hertzFix/history,PairGranHertzFixHistory)
 
 #else
 
-#ifndef LMP_FIX_FLUID_DRAG_H
-#define LMP_FIX_FlUID_DRAG_H
+#ifndef LMP_PAIR_GRAN_HERTZFIX_HISTORY_H
+#define LMP_PAIR_GRAN_HERTZFIX_HISTORY_H
 
-#include "fix.h"
+#include "pair_gran_hooke_history.h"
 
 namespace LAMMPS_NS {
 
-class FixFluidDrag : public Fix {
+class PairGranHertzFixHistory : public PairGranHookeHistory {
  public:
-  double **ffluiddrag;
-  double **DuDt;
-  double **vOld;
-  int *foamCpuId;
-
-  FixFluidDrag(class LAMMPS *, int, char **);
-  ~FixFluidDrag();
-
-  int setmask();
-  void init();
-  void setup(int);
-  virtual void post_force(int);
-
-  double memory_usage();
-  void grow_arrays(int);
-  void copy_arrays(int, int, int);
-  int pack_exchange(int, double *);
-  int unpack_exchange(int, double *);
-
- private:
-  double carrier_rho;
-
+  PairGranHertzFixHistory(class LAMMPS *);
+  virtual void compute(int, int);
+  void settings(int, char **);
+  double single(int, int, int, int, double, double, double, double &);
 };
 
 }
 
 #endif
 #endif
+
+/* ERROR/WARNING messages:
+
+E: Illegal ... command
+
+Self-explanatory.  Check the input script syntax and compare to the
+documentation for the command.  You can use -echo screen as a
+command-line option when running LAMMPS to see the offending line.
+
+*/

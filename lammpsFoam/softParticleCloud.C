@@ -452,7 +452,7 @@ softParticleCloud::softParticleCloud
     deleteParticleOption_ = cloudProperties_.lookupOrDefault("deleteParticle", 0);
     deleteBeforeAddFlag_ = cloudProperties_.lookupOrDefault("deleteBeforeAdd", 0);
 
-    gravity_ = cloudProperties_.lookupOrDefault("g", vector(0,-9.8,0));
+    gravity_ = cloudProperties_.lookupOrDefault("g", vector::zero);
 
 
     // initial the setup when adding particle
@@ -475,7 +475,7 @@ softParticleCloud::softParticleCloud
     }
     else
     {
-        addParticleTimeStep_ = 1/SMALL;
+        addParticleTimeStep_ = 1/ROOTVSMALL;
         randomPerturb_ = 0.0;
         addParticleBox_ = tensor::zero;
         addParticleVel_ = vector::zero;
@@ -698,6 +698,7 @@ void  softParticleCloud::lammpsEvolveForward
     vector* VLocal,
     int* lmpCpuIdLocal,
     vectorList FLocal,
+    vectorList DuDtLocal,
     int nstep
 )
 {
@@ -713,6 +714,7 @@ void  softParticleCloud::lammpsEvolveForward
     // Calculate the number of particles in each LmpCpu
     // and obtain the drag force
     vectorList fromFoamDragList(nList, vector::zero);
+    vectorList fromFoamDuDtList(nList, vector::zero);
     labelList fromFoamFoamCpuIdList(nList, myrank);
     labelList fromFoamTagList(nList, 0);
 
@@ -729,6 +731,7 @@ void  softParticleCloud::lammpsEvolveForward
         softParticle& p = pIter();
 
         fromFoamDragList[i] = FLocal[i];
+        fromFoamDuDtList[i] = DuDtLocal[i];
         fromFoamTagList[i] = p.ptag();
 
         label lmpCpuId = p.pLmpCpuId();
@@ -740,12 +743,21 @@ void  softParticleCloud::lammpsEvolveForward
     // assemble them into lists of drag/tag/foamCpuId
     // by the index of the processor
     List<vectorList> fromFoamDragListList(nprocs);
+    List<vectorList> fromFoamDuDtListList(nprocs);
     List<labelList> fromFoamFoamCpuIdListList(nprocs);
     List<labelList> fromFoamTagListList(nprocs);
     assembleList<vectorList>
     (
         fromFoamDragList,
         fromFoamDragListList,
+        lmpParticleNo,
+        assembleLmpCpuIdList
+    );
+
+    assembleList<vectorList>
+    (
+        fromFoamDuDtList,
+        fromFoamDuDtListList,
         lmpParticleNo,
         assembleLmpCpuIdList
     );
@@ -771,10 +783,12 @@ void  softParticleCloud::lammpsEvolveForward
 
     // transpose the lists in each foamCpu to lmpCpu
     List<vectorList> toLmpDragListList(nprocs);
+    List<vectorList> toLmpDuDtListList(nprocs);
     List<labelList> toLmpFoamCpuIdListList(nprocs);
     List<labelList> toLmpTagListList(nprocs);
 
     transposeAmongProcs<vectorList> (fromFoamDragListList, toLmpDragListList);
+    transposeAmongProcs<vectorList> (fromFoamDuDtListList, toLmpDuDtListList);
     transposeAmongProcs<labelList>
     (
         fromFoamFoamCpuIdListList,
@@ -792,10 +806,12 @@ void  softParticleCloud::lammpsEvolveForward
         toLmpListSize += toLmpTagListList[listI].size();
     }
     vectorList toLmpDragList(toLmpListSize, vector::zero);
+    vectorList toLmpDuDtList(toLmpListSize, vector::zero);
     labelList toLmpFoamCpuIdList(toLmpListSize, 0);
     labelList toLmpTagList(toLmpListSize, 0);
 
     flattenList<vectorList> (toLmpDragListList, toLmpDragList);
+    flattenList<vectorList> (toLmpDuDtListList, toLmpDuDtList);
     flattenList<labelList> (toLmpFoamCpuIdListList, toLmpFoamCpuIdList);
     flattenList<labelList> (toLmpTagListList, toLmpTagList);
 
@@ -810,6 +826,9 @@ void  softParticleCloud::lammpsEvolveForward
         double* toLmpFLocalArray_ =
             reinterpret_cast <double *> (&(toLmpDragList.first()));
 
+        double* toLmpDuDtLocalArray_ =
+            reinterpret_cast <double *> (&(toLmpDuDtList.first()));
+
         int* toLmpFoamCpuIdLocalArray_ =
             reinterpret_cast <int *> (&(toLmpFoamCpuIdList.first()));
 
@@ -821,6 +840,7 @@ void  softParticleCloud::lammpsEvolveForward
             lmp_,
             toLmpListSize,
             toLmpFLocalArray_,
+            toLmpDuDtLocalArray_,
             toLmpFoamCpuIdLocalArray_,
             toLmpTagLocalArray_
         );
@@ -828,6 +848,7 @@ void  softParticleCloud::lammpsEvolveForward
     else
     {
         double* toLmpFLocalArray_ = new double [3*toLmpListSize];
+        double* toLmpDuDtLocalArray_ = new double [3*toLmpListSize];
         int* toLmpFoamCpuIdLocalArray_ = new int [toLmpListSize];
         int* toLmpTagLocalArray_ = new int [toLmpListSize];
 
@@ -837,6 +858,9 @@ void  softParticleCloud::lammpsEvolveForward
             toLmpFLocalArray_[3*i + 0] = toLmpDragList[i].x();
             toLmpFLocalArray_[3*i + 1] = toLmpDragList[i].y();
             toLmpFLocalArray_[3*i + 2] = toLmpDragList[i].z();
+            toLmpDuDtLocalArray_[3*i + 0] = toLmpDuDtList[i].x();
+            toLmpDuDtLocalArray_[3*i + 1] = toLmpDuDtList[i].y();
+            toLmpDuDtLocalArray_[3*i + 2] = toLmpDuDtList[i].z();
             toLmpFoamCpuIdLocalArray_[i] = toLmpFoamCpuIdList[i];
             toLmpTagLocalArray_[i] = toLmpTagList[i];
         }
@@ -846,11 +870,13 @@ void  softParticleCloud::lammpsEvolveForward
             lmp_,
             toLmpListSize,
             toLmpFLocalArray_,
+            toLmpDuDtLocalArray_,
             toLmpFoamCpuIdLocalArray_,
             toLmpTagLocalArray_
         );
 
         delete [] toLmpFLocalArray_;
+        delete [] toLmpDuDtLocalArray_;
         delete [] toLmpFoamCpuIdLocalArray_;
         delete [] toLmpTagLocalArray_;
     }
@@ -1340,9 +1366,9 @@ bool softParticleCloud::pointInRegion(vector& point, tensor& box)
     {
         if
         (
-            (point.x() - x1)*(point.x() - x2) < SMALL &&
-            (point.y() - y1)*(point.y() - y2) < SMALL &&
-            (point.z() - z1)*(point.z() - z2) < SMALL
+            (point.x() - x1)*(point.x() - x2) < ROOTVSMALL &&
+            (point.y() - y1)*(point.y() - y2) < ROOTVSMALL &&
+            (point.z() - z1)*(point.z() - z2) < ROOTVSMALL
         )
         {
             return 1;
@@ -1402,9 +1428,9 @@ bool softParticleCloud::pointInBox(vector& point, tensor& box)
 
     if
     (
-        (point.x() - x1)*(point.x() - x2) < SMALL &&
-        (point.y() - y1)*(point.y() - y2) < SMALL &&
-        (point.z() - z1)*(point.z() - z2) < SMALL
+        (point.x() - x1)*(point.x() - x2) < ROOTVSMALL &&
+        (point.y() - y1)*(point.y() - y2) < ROOTVSMALL &&
+        (point.z() - z1)*(point.z() - z2) < ROOTVSMALL
     )
     {
         return 1;

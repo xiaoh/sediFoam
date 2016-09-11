@@ -33,6 +33,9 @@ Description
 \*---------------------------------------------------------------------------*/
 
 #include "fvCFD.H"
+#include "Kmesh.H"
+#include "UOprocess.H"
+#include "fft.H"
 #include "singlePhaseTransportModel.H"
 #include "PhaseIncompressibleTurbulenceModel.H"
 #include "nearWallDist.H"
@@ -43,7 +46,7 @@ Description
 #include "enhancedCloud.H"
 #include "chPressureGrad.H"
 
-//#define DEBUG_HYBRID
+// #define RANDOM_TURB
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 int main(int argc, char *argv[])

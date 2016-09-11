@@ -234,6 +234,7 @@ protected:
             vector* VLocal,
             int* lmpCpuIdLocal,
             vectorList FLocal,
+            vectorList DuDtLocal,
             int nstep
         );
 
