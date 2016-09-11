@@ -84,6 +84,9 @@ class enhancedCloud
         //- List of particle drag force
         vectorList pDrag_;
 
+        //- List of the matetial derivative of fluid on the particle
+        vectorList pDuDt_;
+
         //- Jd coefficient
         scalarField Jd_;
 
@@ -120,7 +123,8 @@ class enhancedCloud
 
         //- Whether to turn on the force to the particles
         Switch particleDragFlag_;
-        label particlePressureGradFlag_;
+        Switch particlePressureGradFlag_;
+        Switch particleBuoyancyFlag_;
         Switch particleAddedMassFlag_;
         Switch particleLiftForceFlag_;
         Switch particleHistoryForceFlag_;

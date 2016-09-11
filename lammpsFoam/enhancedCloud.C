@@ -118,10 +118,12 @@ void  enhancedCloud::updateDragOnParticles()
     updateParticleAlpha();
 
     pDrag_.setSize(particleCount_);
+    pDuDt_.setSize(particleCount_);
     Jd_.setSize(particleCount_);
 
     // clear pDrag_
     pDrag_ = vector::zero;
+    pDuDt_ = vector::zero;
     Jd_ *= 0.0;
 
     Jd_ = drag_->Jd(magUri_);
@@ -150,6 +152,7 @@ void  enhancedCloud::updateDragOnParticles()
 
         // local pressure gradient is used though (no weighting).
         pDrag_[particleI] = vector::zero;
+        pDuDt_[particleI] = DDtUf_[p.cell()];
 
         if (particleDragFlag_)
         {
@@ -161,28 +164,27 @@ void  enhancedCloud::updateDragOnParticles()
         {
             vector gradpVec = gradp[p.cell()];
 
-            if (particlePressureGradFlag_ == 1)
-            {
-                pDrag_[particleI] += -gradpVec*p.Vol();
-            }
-            else if (particlePressureGradFlag_ == 2)
-            {
-                pDrag_[particleI] +=
-                  -gravity_*rhob_*p.Vol();        // Buoyancy
-            }
-
-            p.ensembleU() = -gradpVec*p.Vol();
+            pDrag_[particleI] += -gradpVec*p.Vol();             // Dynamic pressure
+        }
+        if (particleBuoyancyFlag_)
+        {
+            pDrag_[particleI] += 
+               -gravity_*rhob_*p.Vol();      // Buoyancy
         }
         // Added mass force
         if (particleAddedMassFlag_)
         {
             vector dupdt = (p.U()-p.UOld())/runTime().deltaT().value();
-            if (mag(dupdt) > 100)
+            vector acceleration = DDtUf_[p.cell()]-dupdt;
+            if (mag(DDtUf_[p.cell()] - dupdt) > 10)
             {
                 // Avoid too large added mass
-                dupdt = dupdt/mag(dupdt)*100;
+                // dupdt = dupdt/mag(dupdt)*100;
+                acceleration =  acceleration/(mag(acceleration)+ROOTVSMALL)*10;
             }
-            pDrag_[particleI] += 0.5*rhob_*p.Vol()*(DDtUf_[p.cell()]-dupdt);
+
+            // Add mass is only effective when the particle is accelerating
+            pDrag_[particleI] += 0.5*rhob_*p.Vol()*acceleration;
         }
         if (particleLiftForceFlag_)
         {
@@ -346,7 +348,9 @@ void enhancedCloud::calcTcFields()
             // to be smoothed later!
             Omega_.internalField()[cellI] += omg;
             Asrc_.internalField()[cellI] += omg*(p.U() - UfSmoothed_[cellI]);
+                                          // + gravity_*rhob_*p.Vol()/(1-gamma_[cellI])/(mesh_.V()[cellI]);
             Asrc2_.internalField()[cellI] += omg*(p.U() - UfSmoothed_[cellI]);
+                                          // + gravity_*rhob_*p.Vol()/(1-gamma_[cellI])/(mesh_.V()[cellI]);
             // Asrc_.internalField()[cellI] += omg*(p.U() - Uf_[cellI]);
         }
 
@@ -524,7 +528,7 @@ enhancedCloud::enhancedCloud
 
     // determine the time and time step in diffusion procedure
     scalar diffusionTime = pow(diffusionBandWidth, 2)/4;
-    scalar diffusionDeltaT = diffusionTime/(diffusionSteps + SMALL);
+    scalar diffusionDeltaT = diffusionTime/(diffusionSteps + ROOTVSMALL);
 
     diffusionRunTime_.setEndTime(diffusionTime);
     diffusionRunTime_.setDeltaT(diffusionDeltaT);
@@ -547,7 +551,9 @@ enhancedCloud::enhancedCloud
     // determine the forces to add
     particleDragFlag_ = cloudProperties_.lookupOrDefault("particleDrag", true);
     particlePressureGradFlag_ =
-        cloudProperties_.lookupOrDefault("particlePressureGrad", 1);
+        cloudProperties_.lookupOrDefault("particlePressureGrad", true);
+    particleBuoyancyFlag_ =
+        cloudProperties_.lookupOrDefault("particleBuoyancy", false);
     particleAddedMassFlag_ =
         cloudProperties_.lookupOrDefault("particleAddedMass", false);
     particleLiftForceFlag_ =
@@ -568,8 +574,10 @@ enhancedCloud::enhancedCloud
     }
 
 
-    Info<< particleDragFlag_
+    Info<< "forces are: "
+        << particleDragFlag_
         << particlePressureGradFlag_
+        << particleBuoyancyFlag_
         << particleAddedMassFlag_
         << particleLiftForceFlag_
         << particleHistoryForceFlag_
@@ -585,6 +593,9 @@ enhancedCloud::enhancedCloud
 
     // initialise drag force on each particle
     pDrag_ = vectorList(particleCount_);
+
+    // initialise DuDt of flow velocity on each particle
+    pDuDt_ = vectorList(particleCount_);
 
     // initialize alpha and Ue field
     particleToEulerianField();
@@ -693,6 +704,7 @@ void enhancedCloud::evolve()
             VLocal,
             lmpCpuIdLocal,
             pDrag_,
+            pDuDt_,
             nstep
         );
 
@@ -1316,7 +1328,7 @@ void enhancedCloud::averageInfo()
     reduce(totalVel, sumOp<vector>());
     reduce(localVolume, sumOp<scalar>());
     totalVolume = localVolume;
-    averageVel = totalVel/(totalVolume+SMALL);
+    averageVel = totalVel/(totalVolume+ROOTVSMALL);
 
     Info<< "total volume of particles is: " << totalVolume << endl;
     Info<< "total (velocity x volume) of particles is: " << totalVel << endl;

@@ -4,6 +4,10 @@ fvVectorMatrix UbEqn(Ub, Ub.dimensions()*dimVol/dimTime);
 betaf = fvc::interpolate(beta);
 betaPhib = betaf*phib;
 
+#ifdef RANDOM_TURB
+#   include "calcDNSForce.H"
+#endif
+
 {
     UbEqn =
     (
@@ -26,6 +30,9 @@ betaPhib = betaf*phib;
     //+ alpha/rhob*dragCoef*Ua   // Explicit drag transfered to p-equation
       + beta*alpha/rhob*(liftCoeff + Cvm*rhob*DDtUa)
       + fvc::average(beta)*gradP.flowDirection()*gradP.value() // Adding pressure gradient
+#ifdef RANDOM_TURB
+      + fvc::average(beta)*turbulenceForce // Adding DNS force
+#endif
     );
 
     if (addIBMForce)

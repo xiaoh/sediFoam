@@ -42,10 +42,12 @@
 
 #ifdef ComputeInclude
 #include "compute_gran_local.h"
+#include "compute_cohe_local.h"
 #endif
 
 #ifdef ComputeClass
 FixStyle(gran/local, ComputeGranLocal)
+FixStyle(cohe/local, ComputeCoheLocal)
 #endif
 
 #ifdef DihedralInclude
@@ -62,10 +64,14 @@ FixStyle(gran/local, ComputeGranLocal)
 
 #ifdef FixInclude
 #include "fix_fluid_drag.h"
+#include "fix_cohesive.h"
+#include "fix_wall_granFix.h"
 #endif
 
 #ifdef FixClass
 FixStyle(fdrag, FixFluidDrag)
+FixStyle(cohesive,FixCohe)
+FixStyle(wall/granFix,FixWallGranFix)
 #endif
 
 #ifdef ImproperInclude
@@ -93,9 +99,11 @@ FixStyle(fdrag, FixFluidDrag)
 #endif
 
 #ifdef PairInclude
+#include "pair_gran_hertzFix_history.h"
 #endif
 
 #ifdef PairClass
+PairStyle(gran/hertzFix/history,PairGranHertzFixHistory)
 #endif
 
 #ifdef RegionInclude
