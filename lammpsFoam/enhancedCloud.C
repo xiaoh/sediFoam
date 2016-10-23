@@ -192,7 +192,7 @@ void  enhancedCloud::updateDragOnParticles()
             pDrag_[particleI] +=
                 liftCoeff*rhob_*sqrt(nub_)*sqr(p.d())
              *((Uri_[particleI])^curlU[p.cell()])
-               /sqrt(mag(curlU[p.cell()]));
+               /sqrt(mag(curlU[p.cell()]) + ROOTVSMALL);
         }
         if (particleHistoryForceFlag_)
         {

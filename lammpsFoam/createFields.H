@@ -138,6 +138,11 @@
         Info<< "*** Max possible alpha set to 0.70 by default"
             << endl;
     }
+    else
+    {
+        Info<< "*** Max possible alpha set to " << maxPossibleAlpha
+            << endl;
+    }
 
     // default diffusion steps if not defined in dictionary
     label diffusionSteps =
@@ -145,6 +150,11 @@
     if (!cloudProperties.found("diffusionSteps"))
     {
         Info<< "*** Diffusion steps set to 6 by default"
+            << endl;
+    }
+    else
+    {
+        Info<< "*** Diffusion steps set to " << diffusionSteps
             << endl;
     }
 
