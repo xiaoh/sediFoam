@@ -102,7 +102,7 @@ Foam::tmp<Foam::scalarField> Foam::SyamlalOBrien::Jd
             << abort(FatalError) << endl;
     }
 
-    scalarField beta = max(scalar(1) - alpha_, scalar(1.0e-6));
+    scalarField beta = max(scalar(1) - alpha_, ROOTVSMALL);
     scalarField Ai = pow(beta, 4.14);
     scalarField Bi = 0.8*pow(beta, 1.28);
 
@@ -114,7 +114,7 @@ Foam::tmp<Foam::scalarField> Foam::SyamlalOBrien::Jd
         }
     }
 
-    scalarField Re = max(Ur*pd_/nuf_, scalar(1.0e-3));
+    scalarField Re = max(Ur*pd_/nuf_, ROOTVSMALL);
 
     scalarField Vr =
         0.5
