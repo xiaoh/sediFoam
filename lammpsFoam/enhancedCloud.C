@@ -196,7 +196,41 @@ void  enhancedCloud::updateDragOnParticles()
         }
         if (particleHistoryForceFlag_)
         {
-        //    unfinished
+            // based on the study of Elghannay & Tafti 2016
+            // Development and validation of a reduced order history model
+            scalar tau_d = pow(p.d(),2)/nub_;
+            vector Uri = UfSmoothed_[p.cell()] - p.U();
+            vector UriOld = UfSmoothed_.oldTime()[p.cell()] - p.UOld();
+            scalar ReP = mag(Uri)*p.d()/nub_;
+            scalar RePOld = mag(UriOld)*p.d()/nub_;
+
+            scalar tau_h = tau_d*sqr(0.632/(ReP+ROOTVSMALL) + 0.087);
+            scalar tau_h_old = tau_d*sqr(0.632/(RePOld+ROOTVSMALL) + 0.087);
+            scalar Cb = -1.5*sqr(p.d())*rhob_*pow((3.1416*nub_),0.5);
+            scalar deltaT = runTime().deltaT().value();
+            label nTotal = runTime().timeIndex();
+            scalar tau_t = deltaT*(nTotal - p.n0());
+            vector dupdt = (p.U()-p.UOld())/deltaT;
+            vector delta_fb = Cb*dupdt/sqrt(deltaT); 
+            vector FH(vector::zero);
+
+            if (tau_t < tau_h)
+            {
+                scalar delta_n_h = nTotal - p.n0();
+                p.sumDeltaFb() = p.sumDeltaFb() + delta_fb;
+                FH = g1n(delta_n_h)*p.sumDeltaFb();
+            }
+            else
+            {
+                p.sumDeltaFb() = tau_h/tau_h_old*p.sumDeltaFb();
+                scalar delta_n_h = tau_h/deltaT;
+                p.sumDeltaFb() = (delta_n_h - 1)/delta_n_h*p.sumDeltaFb();
+                p.n0() = nTotal - delta_n_h;
+                p.sumDeltaFb() = p.sumDeltaFb() + delta_fb;
+                FH = g1n(delta_n_h)*p.sumDeltaFb();
+            }
+            
+            pDrag_[particleI] += FH*deltaT;
         }
         if (lubricationFlag_)
         {
@@ -1333,6 +1367,12 @@ void enhancedCloud::averageInfo()
     Info<< "total volume of particles is: " << totalVolume << endl;
     Info<< "total (velocity x volume) of particles is: " << totalVel << endl;
     Info<< "average velocity of all particles is: " << averageVel << endl;
+}
+
+scalar enhancedCloud::g1n(scalar& n)
+{
+    scalar g = 0.9279*(2*n-1)/(n+ROOTVSMALL)*pow(n,-n/(2*n-1+ROOTVSMALL)) + 0.001531; 
+    return g;
 }
 
 
