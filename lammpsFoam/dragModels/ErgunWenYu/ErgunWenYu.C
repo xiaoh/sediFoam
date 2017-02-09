@@ -101,9 +101,9 @@ Foam::tmp<Foam::scalarField> Foam::ErgunWenYu::Jd
             << " pd size: " << pd_.size()
             << abort(FatalError) << endl;
 
-    scalarField beta = max(scalar(1) - alpha_, scalar(1.0e-6));
+    scalarField beta = max(scalar(1) - alpha_, ROOTVSMALL);
     scalarField bp = pow(beta, -2.65);
-    scalarField Re = max(beta*Ur*pd_/nuf_, scalar(1.0e-3));
+    scalarField Re = max(beta*Ur*pd_/nuf_, ROOTVSMALL);
     scalarField Cds = 24.0*(1.0 + 0.15*pow(Re, 0.687))/Re;
 
     forAll(Re, particleI)

@@ -157,7 +157,10 @@ class enhancedCloud
 
         //- drag on each particle
         //- update pDrag_
-        void  updateDragOnParticles();
+        void updateDragOnParticles();
+
+        //- g1n function in the calculation of Basset history force
+        scalar g1n(scalar& n);
 
         // Assert all particles in cells;
         void assertParticleInCell();

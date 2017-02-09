@@ -48,7 +48,9 @@ Foam::softParticle::softParticle
     tag_(0),
     lmpCpuId_(0),
     type_(0),
-    density_(0.0)
+    density_(0.0),
+    n0_(0.0),
+    sumDeltaFb_(vector::zero)
 {
     // Pout<< "Creating a particle from Istream.." << endl;
 
@@ -64,6 +66,7 @@ Foam::softParticle::softParticle
             is >> lmpCpuId_;
             is >> type_;
             density_ = readScalar(is);
+            n0_ = readScalar(is);
         }
         else
         {
@@ -72,7 +75,8 @@ Foam::softParticle::softParticle
                reinterpret_cast<char*>(&d_),
                sizeof(mass_) + sizeof(d_)  + sizeof(positionOld_) + sizeof(UOld_)
              + sizeof(U_) + sizeof(moveU_) + sizeof(ensembleU_) + sizeof(type_)
-             + sizeof(density_) + sizeof(tag_)  + sizeof(lmpCpuId_)
+             + sizeof(density_) + sizeof(n0_) + sizeof(tag_)  + sizeof(lmpCpuId_)
+             + sizeof(sumDeltaFb_)
             );
           }
     }
@@ -90,10 +94,12 @@ Foam::softParticle::softParticle
         Pout<< "moveU is: " << moveU_ << endl;
         Pout<< "ensembleU is: " << ensembleU_ << endl;
         Pout<< "density is: " << density_ << endl;
+        Pout<< "n0 is: " << n0_ << endl;
         Pout<< "mass is: " << mass_ << endl;
         Pout<< "positionOld is: " << positionOld_ << endl;
         Pout<< "UOld is: " << UOld_ << endl;
         Pout<< "position is: " << position() << endl;
+        Pout<< "sumDeltaFb is: " << sumDeltaFb_ << endl;
     }
 
     // Check state of Istream
@@ -116,6 +122,9 @@ void Foam::softParticle::readFields(Cloud<softParticle>& c)
     IOField<scalar> density(c.fieldIOobject("density", IOobject::MUST_READ));
     c.checkFieldIOobject(c, density);
 
+    IOField<scalar> n0(c.fieldIOobject("n0", IOobject::MUST_READ));
+    c.checkFieldIOobject(c, n0);
+
     IOField<scalar> tag(c.fieldIOobject("tag", IOobject::MUST_READ));
     c.checkFieldIOobject(c, tag);
 
@@ -135,6 +144,7 @@ void Foam::softParticle::readFields(Cloud<softParticle>& c)
 
         p.d_ = d[i];
         p.density_ = density[i];
+        p.n0_ = n0[i];
         p.tag_ = tag[i];
         p.lmpCpuId_ = lmpCpuId[i];
         p.type_ = type[i];
@@ -152,6 +162,7 @@ void softParticle::writeFields(const Cloud<softParticle>& c)
 
     IOField<scalar> d(c.fieldIOobject("d", IOobject::NO_READ), np);
     IOField<scalar> density(c.fieldIOobject("density", IOobject::NO_READ), np);
+    IOField<scalar> n0(c.fieldIOobject("n0", IOobject::NO_READ), np);
     IOField<label> tag(c.fieldIOobject("tag", IOobject::NO_READ), np);
     IOField<label> lmpCpuId(c.fieldIOobject("lmpCpuId", IOobject::NO_READ), np);
     IOField<label> type(c.fieldIOobject("type", IOobject::NO_READ), np);
@@ -169,6 +180,7 @@ void softParticle::writeFields(const Cloud<softParticle>& c)
 
         d[i] = p.d_;
         density[i] = p.density_;
+        n0[i] = p.n0_;
         tag[i] = p.tag_;
         lmpCpuId[i] = p.lmpCpuId_;
         type[i] = p.type_;
@@ -217,6 +229,12 @@ void softParticle::writeFields(const Cloud<softParticle>& c, const label np)
         np
     );
 
+    IOField<vector> sumDeltaFb
+    (
+        c.fieldIOobject("sumDeltaFb", IOobject::NO_READ),
+        np
+    );
+
     IOField<label> origProc
     (
         c.fieldIOobject("origProcId", IOobject::NO_READ),
@@ -242,6 +260,7 @@ void softParticle::writeFields(const Cloud<softParticle>& c, const label np)
         ensembleU[i] = p.ensembleU_;
         positionsOld[i] = p.positionOld_;
         UOld[i] = p.UOld_;
+        sumDeltaFb[i] = p.sumDeltaFb_;
 
         origProc[i] = p.origProc();
         origId[i] = p.origId();
@@ -277,8 +296,10 @@ Foam::Ostream& Foam::operator<<(Ostream& os, const softParticle& p)
             << token::SPACE << p.ensembleU_
             << token::SPACE << p.mass_
             << token::SPACE << p.density_
+            << token::SPACE << p.n0_
             << token::SPACE << p.positionOld_
-            << token::SPACE << p.UOld_;
+            << token::SPACE << p.UOld_
+            << token::SPACE << p.sumDeltaFb_;
     }
     else
     {
@@ -288,7 +309,8 @@ Foam::Ostream& Foam::operator<<(Ostream& os, const softParticle& p)
             reinterpret_cast<const char*>(&p.d_),
             sizeof(p.d_) + sizeof(p.tag_) + sizeof(p.lmpCpuId_) + sizeof(p.type_) + sizeof(p.U_)
           + sizeof(p.moveU_) + sizeof(p.ensembleU_) + sizeof(p.mass_)
-          + sizeof(p.density_) + sizeof(p.positionOld_) + sizeof(p.UOld_)
+          + sizeof(p.density_) + sizeof(p.n0_) + sizeof(p.positionOld_) + sizeof(p.UOld_)
+          + sizeof(p.sumDeltaFb_)
         );
     }
 

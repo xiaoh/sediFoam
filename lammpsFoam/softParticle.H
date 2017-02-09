@@ -100,6 +100,11 @@ class softParticle
         //- Density of the particle.
         scalar density_;
 
+        //- Number of the steps in calculation of history force.
+        scalar n0_;
+
+        //- Sum of the basset history force of the particle.
+        vector sumDeltaFb_;
 
     // Private Member Functions
 
@@ -266,6 +271,18 @@ public:
             {
                 return constant::mathematical::pi*d_*d_*d_/6.0;
             };
+
+            //- Return history n0 value
+            scalar& n0()
+            {
+                return n0_;
+            }
+
+            //- Return the sum of previous history force 
+            vector& sumDeltaFb()
+            {
+                return sumDeltaFb_;
+            }
 
 
         // Patch interactions
