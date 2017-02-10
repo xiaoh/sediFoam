@@ -1371,8 +1371,16 @@ void enhancedCloud::averageInfo()
 
 scalar enhancedCloud::g1n(scalar& n)
 {
-    scalar g = 0.9279*(2*n-1)/(n+ROOTVSMALL)*pow(n,-n/(2*n-1+ROOTVSMALL)) + 0.001531; 
-    return g;
+    if (n < 1)
+    {
+        scalar g = 0.9279;
+        return g;
+    }
+    else
+    {
+        scalar g = 0.9279*(2*n-1)/n*pow(n,-n/(2*n-1)) + 0.001531; 
+        return g;
+    }
 }
 
 
