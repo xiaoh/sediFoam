@@ -59,7 +59,9 @@ softParticle::softParticle
     tag_(tag),
     lmpCpuId_(lmpCpuId),
     type_(type),
-    density_(rhos)
+    density_(rhos),
+    n0_(0.),
+    sumDeltaFb_(vector::zero)
 {
     calculateDerived();
 }
@@ -70,6 +72,7 @@ void softParticle::calculateDerived()
     mass_=  density_*4./3.*constant::mathematical::pi*d_*d_*d_/8.;
     positionOld_ = position_;
     UOld_ = U_;
+
     // Pout<< "creating a softParticle." << endl;
     if (debug)
     {
@@ -81,6 +84,8 @@ void softParticle::calculateDerived()
         Pout<< "mass is: " << mass_ << endl;
         Pout<< "positionOld is: " << positionOld_ << endl;
         Pout<< "UOld is: " << UOld_ << endl;
+        Pout<< "n0 is: " << n0_ << endl;
+        Pout<< "sumDeltaFb is: " << sumDeltaFb_ << endl;
     }
 }
 
