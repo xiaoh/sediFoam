@@ -1,0 +1,39 @@
+# SRD diffusion demo - dimer particles
+
+atom_style  sphere
+atom_modify map array
+boundary    pp pp pp
+newton  off
+communicate single vel yes
+# processors 12 1 4
+
+# read in clusters of rigid bodies
+
+fix         molprop all property/atom mol
+read_data   In_initial.in fix molprop NULL Molecules
+
+neighbor 0.001 bin
+neigh_modify delay 0
+
+# set     type 1 mass 0.0000196
+group   big type >= 3
+group   normal type 1
+group   bottom type 2
+    
+timestep 1e-5
+
+pair_style  gran/hooke/history 20.0 NULL 38200 NULL 0.4 0
+pair_coeff  * *
+
+fix     1 big fdrag 1000
+fix     2 big gravity 9.81 vector 0 -1 0
+
+molecule    object1 in.pairA
+molecule    object2 in.pairB
+molecule    object3 in.pairC
+molecule    object4 in.pairD
+fix         5 big rigid/small molecule
+
+dump    1 all custom 100000 dump.dimer.equil id type diameter mass x y z vx vy vz
+
+thermo  100
