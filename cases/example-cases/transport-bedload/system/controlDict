@@ -1,0 +1,105 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  1.4                                   |
+|   \\  /    A nd           | Web:      http://www.openfoam.org               |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+
+FoamFile
+{
+    version         2.0;
+    format          ascii;
+
+    root            "";
+    case            "";
+    instance        "";
+    local           "";
+
+    class           dictionary;
+    object          controlDict;
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+application     hybridFoam;
+
+startFrom       startTime;
+
+startTime       0;
+
+stopAt          endTime;
+
+endTime         10;
+
+deltaT          0.0002;
+
+writeControl    runTime;
+
+writeInterval   1.0;
+
+purgeWrite      0;
+
+writeFormat     ascii;
+
+writePrecision  6;
+
+writeCompression uncompressed;
+
+timeFormat      general;
+
+timePrecision   6;
+
+runTimeModifiable yes;
+
+functions 
+{ 
+    fieldAverage1 
+    { 
+        type                fieldAverage; 
+        functionObjectLibs  ("libfieldFunctionObjects.so"); 
+        enabled             true;
+        timeStart           5;
+        timeEnd             25;
+        outputControl       outputTime;
+ 
+        fields 
+        ( 
+            p 
+            {
+                mean        on;
+                prime2Mean  on;
+                base        time;
+            }
+
+            Ub
+            {
+                mean        on;
+                prime2Mean  on;
+                base        time;
+            }
+
+            Ua
+            {
+                mean        on;
+                prime2Mean  on;
+                base        time;
+            }
+
+            alpha
+            {
+                mean        on;
+                prime2Mean  on;
+                base        time;
+            }
+
+            Uc
+            {
+                mean        on;
+                prime2Mean  on;
+                base        time;
+            }
+        ); 
+    } 
+};
+// ************************************************************************* //

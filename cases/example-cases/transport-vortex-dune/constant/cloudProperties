@@ -1,0 +1,54 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  1.0                                   |
+|   \\  /    A nd           | Web:      http://www.openfoam.org               |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+
+FoamFile
+{
+    version         2.0;
+    format          ascii;
+
+    root            "";
+    case            "";
+    instance        "";
+    local           "";
+
+    class           dictionary;
+    object          sprayProperties;
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+interpolationSchemes
+{
+    U               cellPointFace;
+}
+
+g 		    (0 -9.8 0);
+
+dragModel   SyamlalOBrien;
+subCycles	5;
+// diffusionSteps 3;
+diffusionSteps 4;
+diffusionBandWidth 0.0005;
+maxPossibleAlpha 0.8;
+
+particleDrag            1;
+particlePressureGrad    1;
+particleAddedMass       0;
+lubricationForce        0;
+particleLift            1;
+particleHistoryForce    0;
+
+UfSmooth    0;
+UpSmooth    1;
+dragSmooth  1;
+alphaSmooth 1;
+
+smoothDirection (4.0 0 0 0 1.2 0 0 0 4.0);
+
+
+// ************************************************************************* //

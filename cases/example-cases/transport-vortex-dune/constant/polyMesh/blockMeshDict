@@ -1,0 +1,122 @@
+/*---------------------------------------------------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  1.4                                   |
+|   \\  /    A nd           | Web:      http://www.openfoam.org               |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+
+FoamFile
+{
+    version         2.0;
+    format          ascii;
+
+    root            "";
+    case            "";
+    instance        "";
+    local           "";
+
+    class           dictionary;
+    object          blockMeshDict;
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+convertToMeters 1;
+
+vertices        
+(
+    (0.00       0.00    0.00)
+    (0.155885   0.00    0.00)
+    (0.155885   0.0015  0.00)
+    (0.00       0.0015  0.00)
+    (0.00       0.00    0.040001)
+    (0.155885   0.00    0.040001)
+    (0.155885   0.0015  0.040001)
+    (0.00       0.0015  0.040001)
+    (0.00       0.0167  0.00)
+    (0.155885   0.0167  0.00)
+    (0.155885   0.0167  0.040001)
+    (0.00       0.0167  0.040001)
+);
+
+blocks          
+(
+    hex (0 1 2 3 4 5 6 7)   (120 10  40) simpleGrading (1 0.3 1)
+    hex (3 2 9 8 7 6 10 11) (120 130 40) simpleGrading (1 2.2 1)
+);
+
+edges           
+(
+);
+
+boundary         
+(
+    bottom
+    {
+        type wall;
+        faces
+        (
+            (1 5 4 0)
+        );
+    }
+
+    top
+    {
+        type wall;
+        faces
+        (
+            (8 9 10 11)
+        );
+    }
+
+    left
+    {
+        type cyclic;
+        neighbourPatch right;
+        faces
+        (
+            (0 4 7 3)
+            (3 7 11 8)
+        );
+    }
+
+    right
+    {
+        type cyclic;
+        neighbourPatch left;
+        faces
+        (
+            (2 6 5 1)
+            (9 10 6 2)
+        );
+    }
+
+    front
+    {
+        type cyclic;
+        neighbourPatch back;
+        faces
+        (
+            (0 1 2 3)
+            (3 2 9 8)
+        );
+    }
+
+    back
+    {
+        type cyclic;
+        neighbourPatch front;
+        faces
+        (
+            (4 5 6 7)
+            (7 6 10 11)
+        );
+    }
+);
+
+mergePatchPairs
+(
+);
+
+// ************************************************************************* //
