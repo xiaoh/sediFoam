@@ -17,6 +17,10 @@ References
 [bibliography]
 - [[[Wang2016]]] R.Q Wang, R. Sun and H. Xiao. Euler-Lagrangian Simulation of MultiphasePlumesin Stratified Flows.  The 7th International Conference on Computational Methods. November, 2016, Berkeley, CA. https://www.researchgate.net/publication/316416310_Euler-Lagrangian_Simulation_of_Multiphase_Plumes_in_Stratified_Flows[Link]
 
+- [[[Sun2017cohesive]]] R. Sun, H. Xiao, H. Sun. Investigating the settling dynamics of cohesive silt particles with particle-resolving simulations. Advances in Water Resources. 111, 406-422, 2018. https://doi.org/10.1016/j.advwatres.2017.11.012[DOI: 10.1016/j.advwatres.2017.11.012]
+
+-[[[Sun2017irregular]]] R. Sun, H. Xiao and H. Sun. Realistic representation of grain shapes in CFD-DEM simulations of sediment transport with a bonded-sphere approach. Advances in Water Resources. 107, 421-438, 2017. https://doi.org/10.1016/j.advwatres.2017.04.015[DOI: 10.1016/j.advwatres.2017.04.015]
+
 - [[[Sun2016]]] R. Sun and H. Xiao. 'SediFoam: A general-purpose, open-source CFD-DEM solver for particle-laden flows with emphasis on sediment transport'. Computers and Geosciences, 89, 207-219, 2016. https://doi.org/10.1016/j.cageo.2016.01.011[DOI:10.1016/j.cageo.2016.01.011]
 
 - [[[Sun2015a]]] R. Sun and H. Xiao. 'Diffusion-Based Coarse Graining in Hybrid Continuum–Discrete Solvers: Theoretical Formulation and A Priori Tests'. International Journal of Multiphase Flow, 77, 142-157, 2015. https://doi.org/10.1016/j.ijmultiphaseflow.2015.08.014[DOI:10.1016/j.ijmultiphaseflow.2015.08.014]. Also available at http://arxiv.org/abs/1409.0001[arxiv:1409.0001]
