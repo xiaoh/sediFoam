@@ -6,9 +6,9 @@ SediFoam is a hybrid CFD--DEM solver for particle-laden flows based on two open-
 
 More information can be found at the https://github.com/xiaoh/sediFoam/wiki[wiki pages] of this site.
 
-Development: Rui Sun (2013-present), Heng Xiao (2008-present), Jin Sun (University of Edinburgh, 2008-2010) +
-Contributions and further development: Ruo-Qian Wang (University of Dundee), Prashant Gupta (P&G) +
-Send bug reports and comments to: Heng Xiao (hengxiao@vt.edu) +
+Development: Rui Sun (2013-present), Heng Xiao (2008-present), Jin Sun (University of Edinburgh, 2008-2010), Ruo-Qian Wang (University of Dundee), Prashant Gupta (P&G) +
+
+Please send bug reports and comments to: Heng Xiao (hengxiao@vt.edu) +
 
 [bibliography]
 References
