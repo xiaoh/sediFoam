@@ -15,7 +15,7 @@ References
 ----------
 
 [bibliography]
-- [[[Wang2016]]] Euler-Lagrangian Simulation of MultiphasePlumesin Stratified Flows.  The 7th International Conference on Computational Methods. November, 2016, Berkeley, CA. https://www.researchgate.net/publication/316416310_Euler-Lagrangian_Simulation_of_Multiphase_Plumes_in_Stratified_Flows [Link]
+- [[[Wang2016]]] R.Q Wang, R. Sun and H. Xiao. Euler-Lagrangian Simulation of MultiphasePlumesin Stratified Flows.  The 7th International Conference on Computational Methods. November, 2016, Berkeley, CA. https://www.researchgate.net/publication/316416310_Euler-Lagrangian_Simulation_of_Multiphase_Plumes_in_Stratified_Flows[Link]
 
 - [[[Sun2016]]] R. Sun and H. Xiao. 'SediFoam: A general-purpose, open-source CFD-DEM solver for particle-laden flows with emphasis on sediment transport'. Computers and Geosciences, 89, 207-219, 2016. https://doi.org/10.1016/j.cageo.2016.01.011[DOI:10.1016/j.cageo.2016.01.011]
 
