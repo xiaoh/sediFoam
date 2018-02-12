@@ -42,8 +42,8 @@ for (int corr = 0; corr < nCorr; corr++)
 
     phib =
         (fvc::interpolate(Ub) & mesh.Sf())
-      //  + fvc::ddtPhiCorr(rUbA, Ub, phib) // For OpenFOAM earlier than 2.1.0
-      + rUbAf*fvc::ddtCorr(Ub, phib) // For OpenFOAM 2.3.0, 3.0.1, and 4.0.0
+      + fvc::ddtPhiCorr(rUbA, Ub, phib) // For OpenFOAM earlier than 2.1.0
+      // + rUbAf*fvc::ddtCorr(Ub, phib) // For OpenFOAM 2.3.0, 3.0.1, and 4.0.0
       + phiDragb;
 
     phi = alphaf*phia + betaf*phib;
