@@ -30,7 +30,7 @@ References
 
 - [[[Sun2016b]]] R. Sun and H. Xiao. 'CFD-DEM simulations of current-induced dune formation and morphological evolution'. Advances in Water Resources, 2016. https://doi.org/10.1016/j.advwatres.2016.03.018[doi:10.1016/j.advwatres.2016.03.018]. Also available at: http://arxiv.org/abs/1510.07201[arxiv:1510.07201]
 
-- [[[Xu2018]]] S. Xu, R. Sun, Y. Cai and H. Sun. Study of sedimentation of non-cohesive particles via CFD-DEM simulations. Granular Matter, 2018. https://doi.org/10.1016/j.advwatres.2017.11.012[https://arxiv.org/pdf/1711.01524.pdf]
+- [[[Xu2018]]] S. Xu, R. Sun, Y. Cai and H. Sun. Study of sedimentation of non-cohesive particles via CFD-DEM simulations. Granular Matter, 2018. https://doi.org/10.1016/j.advwatres.2017.11.012[arxiv:1711.01524]
 
 - [[[Wang2016]]] R.Q Wang, R. Sun and H. Xiao. Euler-Lagrangian Simulation of Multiphase Plumes in Stratified Flows.  The 7th International Conference on Computational Methods. November, 2016, Berkeley, CA. https://www.researchgate.net/publication/316416310_Euler-Lagrangian_Simulation_of_Multiphase_Plumes_in_Stratified_Flows[Link]
 
