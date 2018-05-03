@@ -15,7 +15,6 @@ References
 ----------
 
 [bibliography]
-- [[[Wang2016]]] R.Q Wang, R. Sun and H. Xiao. Euler-Lagrangian Simulation of Multiphase Plumes in Stratified Flows.  The 7th International Conference on Computational Methods. November, 2016, Berkeley, CA. https://www.researchgate.net/publication/316416310_Euler-Lagrangian_Simulation_of_Multiphase_Plumes_in_Stratified_Flows[Link]
 
 - [[[Sun2017cohesive]]] R. Sun, H. Xiao, H. Sun. Investigating the settling dynamics of cohesive silt particles with particle-resolving simulations. Advances in Water Resources. 111, 406-422, 2018. https://doi.org/10.1016/j.advwatres.2017.11.012[DOI: 10.1016/j.advwatres.2017.11.012]
 
@@ -30,6 +29,10 @@ References
 - [[[Xiao2011]]] H. Xiao and J. Sun. 'Algorithms in a robust hybrid CFD–DEM solver for particle-laden flows'. Communications in Computational Physics, 9(2), 297-323, 2011. https://doi.org/10.4208/cicp.260509.230210a[DOI: 10.4208/cicp.260509.230210a]. Full text also available on https://www.researchgate.net/publication/228467581_Algorithms_in_a_Robust_Hybrid_CFD-DEM_Solver_for_Particle-Laden_Flows[ResearchGate].
 
 - [[[Sun2016b]]] R. Sun and H. Xiao. 'CFD-DEM simulations of current-induced dune formation and morphological evolution'. Advances in Water Resources, 2016. https://doi.org/10.1016/j.advwatres.2016.03.018[doi:10.1016/j.advwatres.2016.03.018]. Also available at: http://arxiv.org/abs/1510.07201[arxiv:1510.07201]
+
+- [[[Xu2018]]] S. Xu, R. Sun, Y. Cai and H. Sun. Study of sedimentation of non-cohesive particles via CFD-DEM simulations. Granular Matter, 2018. https://doi.org/10.1016/j.advwatres.2017.11.012[https://arxiv.org/pdf/1711.01524.pdf]
+
+- [[[Wang2016]]] R.Q Wang, R. Sun and H. Xiao. Euler-Lagrangian Simulation of Multiphase Plumes in Stratified Flows.  The 7th International Conference on Computational Methods. November, 2016, Berkeley, CA. https://www.researchgate.net/publication/316416310_Euler-Lagrangian_Simulation_of_Multiphase_Plumes_in_Stratified_Flows[Link]
 
 - [[[Gupta2015a]]] Gupta, Prashant, J. Sun, and J. Y. Ooi. 'DEM-CFD simulation of a dense fluidized bed: Wall boundary and particle size effects'. Powder Technology, 2015. https://doi.org/10.1016/j.powtec.2015.11.050[DOI:10.1016/j.powtec.2015.11.050]
 
