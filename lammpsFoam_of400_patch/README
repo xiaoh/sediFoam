@@ -1,0 +1,7 @@
+Patches for installing sediFoam to OpenFOAM 4.0 version
+
+Copy the *.H files in the current directory back to lammpsFoam folder, and compile sediFoam:
+  
+  cp *.H ../lammpsFoam
+  cd ../lammpsFoam
+  wmake
