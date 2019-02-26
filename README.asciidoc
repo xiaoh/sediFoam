@@ -8,7 +8,9 @@ More information can be found at the https://github.com/xiaoh/sediFoam/wiki[wiki
 
 Development: Rui Sun (2013-present), Heng Xiao (2008-present), Jin Sun (University of Edinburgh, 2008-2010), Prashant Gupta (P&G) +
 
-Please send bug reports and comments to: Heng Xiao (hengxiao@vt.edu) +
+Please send bug reports and comments to the online forum - other users may come to help.
+
+You can also contact: Heng Xiao (hengxiao@vt.edu) , but reply may be slow. +
 
 [bibliography]
 References
