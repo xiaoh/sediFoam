@@ -30,7 +30,7 @@ echo "Copying packages to LAMMPS.."
 cp -rf $currentDir/interfaceToLammps/MAKE $lammpsSRC/
 cp -rf $currentDir/interfaceToLammps/USER-CFDDEM $lammpsSRC/
 cp -rf $currentDir/interfaceToLammps/Makefile $lammpsSRC/
-cp -rf $currentDir/interfaceToLammps/lib $lammpsDir/lib/
+cp -rf $currentDir/interfaceToLammps/lib/* $lammpsDir/lib/
 
 # Make STUBS 
 cd $lammpsDir/src/STUBS
