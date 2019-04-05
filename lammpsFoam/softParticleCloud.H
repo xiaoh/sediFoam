@@ -157,6 +157,9 @@ class softParticleCloud
         //- find the CFD cell ID in which the particles are added
         void findAddParticleCells();
 
+        //- remove missing particle
+        void delMissingParticles(label);
+
 
 protected:
 
@@ -235,7 +238,8 @@ protected:
             int* lmpCpuIdLocal,
             vectorList FLocal,
             vectorList DuDtLocal,
-            int nstep
+            int nstep,
+            volVectorField &UfSmoothed_
         );
 
         //- Set particle positions and velocities of the cloud
