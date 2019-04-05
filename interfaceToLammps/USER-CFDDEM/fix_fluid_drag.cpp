@@ -45,6 +45,7 @@ FixFluidDrag::FixFluidDrag(LAMMPS *lmp, int narg, char **arg) :
   grow_arrays(atom->nmax);
   atom->add_callback(0);
   force_reneighbor = 0; // when adding particles, set this value to 1.
+  create_attribute = 1;
 
   if (narg == 3) {
     carrier_rho = 0;
@@ -61,9 +62,12 @@ FixFluidDrag::FixFluidDrag(LAMMPS *lmp, int narg, char **arg) :
   // unregister callbacks to this fix from Atom class
   atom->delete_callback(id,0);
 
-  delete [] foamCpuId;
-  delete [] vOld;
-  delete [] DuDt;
+//  delete [] foamCpuId;
+//  delete [] vOld;
+//  delete [] DuDt;
+  memory->destroy(foamCpuId);
+  memory->destroy(vOld);
+  memory->destroy(DuDt);
   memory->destroy(ffluiddrag);
 }
 
@@ -82,6 +86,7 @@ void FixFluidDrag::init()
 {
   int nlocal = atom->nlocal;
   int *mask = atom->mask;
+
   for (int i = 0; i < nlocal; i++){
     if (mask[i] & groupbit) {
       ffluiddrag[i][0] = 0.;
@@ -129,36 +134,26 @@ void FixFluidDrag::post_force(int vflag)
   double *rmass = atom->rmass;
   double *r = atom->radius;
 
-  // printf("++++=A> deltaT is: %10f, Vx = %10f, Vy = %10f, Vz = %10f\n", timeStep, v[0][0], v[0][1], v[0][2]);
-  // printf("++++=A> deltaT is: %10f, VxOld = %10f, VyOld = %10f, VzOld = %10f\n", timeStep, vOld[0][0], vOld[0][1], vOld[0][2]);
-
-  // printf("++++=A> deltaT is: %10f, Ax = %10f, Ay = %10f, Az = %10f\n", timeStep, 
-  //       ((v[0][0] - vOld[0][0])/timeStep),
-  //       ((v[0][1] - vOld[0][1])/timeStep),
-  //       ((v[0][2] - vOld[0][2])/timeStep));
-  // int myrank;
-  // MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
-
-  // printf("++++=A> myrank = %5d, nlocal = %5d, nghost = %5d,
-  //    ndrag = %5d\n", myrank, nlocal, nghost, ndrag);
   for (int i = 0; i < nlocal; i++) {
     if (mask[i] & groupbit) {
 
-       rho = 3.0*rmass[i]/(4.0*3.14159265358917323846*r[i]*r[i]*r[i]);
-       accX = ((v[i][0] - vOld[i][0])/timeStep),
-       accY = ((v[i][1] - vOld[i][1])/timeStep),
-       accZ = ((v[i][2] - vOld[i][2])/timeStep),
+     rho = 3.0*rmass[i]/(4.0*3.14159265358917323846*r[i]*r[i]*r[i]);
+     accX = ((v[i][0] - vOld[i][0])/timeStep),
+     accY = ((v[i][1] - vOld[i][1])/timeStep),
+     accZ = ((v[i][2] - vOld[i][2])/timeStep),
 
-       f[i][0] += ffluiddrag[i][0] + 
-                  carrier_rho/rho*0.5*rmass[i]*(DuDt[i][0] - accX);
-       f[i][1] += ffluiddrag[i][1] +
-                  carrier_rho/rho*0.5*rmass[i]*(DuDt[i][1] - accY);
-       f[i][2] += ffluiddrag[i][2] +
-                  carrier_rho/rho*0.5*rmass[i]*(DuDt[i][2] - accZ);
+     f[i][0] += ffluiddrag[i][0] +
+                carrier_rho/rho*0.5*rmass[i]*(DuDt[i][0] - accX);
+     f[i][1] += ffluiddrag[i][1] +
+                carrier_rho/rho*0.5*rmass[i]*(DuDt[i][1] - accY);
+     f[i][2] += ffluiddrag[i][2] +
+                carrier_rho/rho*0.5*rmass[i]*(DuDt[i][2] - accZ);
 
-       vOld[i][0] = v[i][0];
-       vOld[i][1] = v[i][1];
-       vOld[i][2] = v[i][2];
+     vOld[i][0] = v[i][0];
+     vOld[i][1] = v[i][1];
+     vOld[i][2] = v[i][2];
+
+       //printf("%i, f = %e  %e  %e \n", i, ffluiddrag[i][0], ffluiddrag[i][1],ffluiddrag[i][2]);
     }
   }
 }
@@ -240,4 +235,25 @@ int FixFluidDrag::unpack_exchange(int nlocal, double *buf)
   vOld[nlocal][1] = buf[8];
   vOld[nlocal][2] = buf[9];
   return 10;
+}
+
+/* ----------------------------------------------------------------------
+   initialize one atom's array values, called when atom is created
+------------------------------------------------------------------------- */
+
+void FixFluidDrag::set_arrays(int i)
+{
+	foamCpuId[i] = 0;
+
+	ffluiddrag[i][0] = 0.;
+	ffluiddrag[i][1] = 0.;
+	ffluiddrag[i][2] = 0.;
+
+    DuDt[i][0] = 0.;
+    DuDt[i][1] = 0.;
+    DuDt[i][2] = 0.;
+
+    vOld[i][0] = 0.;
+    vOld[i][1] = 0.;
+    vOld[i][2] = 0.;
 }

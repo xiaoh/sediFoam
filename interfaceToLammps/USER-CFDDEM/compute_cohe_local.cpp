@@ -14,7 +14,8 @@
 #include "math.h"
 #include "string.h"
 #include "stdlib.h"
-#include "compute_gran_local.h"
+#include "compute_cohe_local.h"
+#include "fix_cohesive.h"
 #include "atom.h"
 #include "update.h"
 #include "force.h"
@@ -24,6 +25,7 @@
 #include "neigh_list.h"
 #include "group.h"
 #include "memory.h"
+#include "modify.h"
 #include "error.h"
 
 using namespace LAMMPS_NS;
@@ -34,7 +36,7 @@ enum{DIST,ENG,FORCE,FX,FY,FZ,PN,TAG1,TAG2};
 
 /* ---------------------------------------------------------------------- */
 
-ComputeGranLocal::ComputeGranLocal(LAMMPS *lmp, int narg, char **arg) :
+ComputeCoheLocal::ComputeCoheLocal(LAMMPS *lmp, int narg, char **arg) :
   Compute(lmp, narg, arg)
 {
   if (narg < 4) error->all(FLERR,"Illegal compute pair/local command");
@@ -66,6 +68,22 @@ ComputeGranLocal::ComputeGranLocal(LAMMPS *lmp, int narg, char **arg) :
     } else error->all(FLERR,"Invalid keyword in compute pair/local command");
   }
 
+  // the pointer to the fix_fluid_drag class
+  class FixCohe *cohe_ptr = NULL;
+
+  int i;
+  for (i = 0; i < (modify->nfix); i++)
+    if (strcmp(modify->fix[i]->style,"cohesive") == 0) break;
+
+  if (i < modify->nfix)
+    //initialize the pointer
+    cohe_ptr = (FixCohe *) modify->fix[i];
+
+  ah = cohe_ptr->ah;
+  lam = cohe_ptr->lam;
+  smin = cohe_ptr->smin;
+  smax = cohe_ptr->smax;
+
   // set singleflag if need to call pair->single()
 
   singleflag = 0;
@@ -79,7 +97,7 @@ ComputeGranLocal::ComputeGranLocal(LAMMPS *lmp, int narg, char **arg) :
 
 /* ---------------------------------------------------------------------- */
 
-ComputeGranLocal::~ComputeGranLocal()
+ComputeCoheLocal::~ComputeCoheLocal()
 {
   memory->destroy(vector);
   memory->destroy(array);
@@ -89,7 +107,7 @@ ComputeGranLocal::~ComputeGranLocal()
 
 /* ---------------------------------------------------------------------- */
 
-void ComputeGranLocal::init()
+void ComputeCoheLocal::init()
 {
   if (singleflag && force->pair == NULL)
     error->all(FLERR,"No pair style is defined for compute pair/local");
@@ -111,14 +129,14 @@ void ComputeGranLocal::init()
 
 /* ---------------------------------------------------------------------- */
 
-void ComputeGranLocal::init_list(int id, NeighList *ptr)
+void ComputeCoheLocal::init_list(int id, NeighList *ptr)
 {
   list = ptr;
 }
 
 /* ---------------------------------------------------------------------- */
 
-void ComputeGranLocal::compute_local()
+void ComputeCoheLocal::compute_local()
 {
   invoked_local = update->ntimestep;
 
@@ -137,10 +155,12 @@ void ComputeGranLocal::compute_local()
    if flag is set, compute requested info about pair
 ------------------------------------------------------------------------- */
 
-int ComputeGranLocal::compute_pairs(int flag)
+int ComputeCoheLocal::compute_pairs(int flag)
 {
   int i,j,m,n,ii,jj,inum,jnum,itype,jtype;
-  double xtmp,ytmp,ztmp,delx,dely,delz;
+  double xtmp,ytmp,ztmp,del,delx,dely,delz;
+  double r,rinv,radi,radj,radsum;
+  double ccel,ccelx,ccely,ccelz;
   double rsq,eng,fpair,factor_coul,factor_lj;
   int *ilist,*jlist,*numneigh,**firstneigh;
   double *ptr;
@@ -148,6 +168,7 @@ int ComputeGranLocal::compute_pairs(int flag)
   double **x = atom->x;
   int *type = atom->type;
   int *mask = atom->mask;
+  double *radius = atom->radius;
   int nlocal = atom->nlocal;
   double *special_coul = force->special_coul;
   double *special_lj = force->special_lj;
@@ -155,7 +176,7 @@ int ComputeGranLocal::compute_pairs(int flag)
 
   // invoke half neighbor list (will copy or build if necessary)
 
-  if (flag == 0) neighbor->build_one(list->index);
+  if (flag == 0) neighbor->build_one(list);
 
   inum = list->inum;
   ilist = list->ilist;
@@ -182,6 +203,7 @@ int ComputeGranLocal::compute_pairs(int flag)
     ztmp = x[i][2];
     itype = type[i];
     jlist = firstneigh[i];
+    radi = radius[i];
     jnum = numneigh[i];
 
     for (jj = 0; jj < jnum; jj++) {
@@ -198,7 +220,31 @@ int ComputeGranLocal::compute_pairs(int flag)
       delz = ztmp - x[j][2];
       rsq = delx*delx + dely*dely + delz*delz;
       jtype = type[j];
-      if (rsq >= cutsq[itype][jtype]) continue;
+      radj = radius[j];
+      radsum = radi + radj;
+
+      // if (rsq >= cutsq[itype][jtype]) continue;
+
+      if (rsq < (radsum + smax)*(radsum + smax)){
+        r = sqrt(rsq);
+        del = r - radsum;
+        if (del > smin)
+          ccel = - ah*pow(radsum,6)/6.0/del/del/(r + radsum)/(r + radsum)
+        /r/r/r;
+        else 
+          ccel = - ah*pow(radsum,6)/6.0/smin/smin/(smin+ 2.0*radsum)/(smin + 2.0*radsum)
+        /(smin + radsum)/(smin + radsum)/(smin + radsum);
+        rinv = 1.0/r;
+
+        ccelx = delx*ccel*rinv;
+        ccely = dely*ccel*rinv;
+        ccelz = delz*ccel*rinv;
+      }
+      else {
+        ccelx = 0;
+        ccely = 0;
+        ccelz = 0;
+      }
 
       if (flag) {
         if (singleflag)
@@ -219,13 +265,13 @@ int ComputeGranLocal::compute_pairs(int flag)
             ptr[n] = sqrt(rsq)*fpair;
             break;
           case FX:
-            ptr[n] = delx*fpair;
+            ptr[n] = ccelx;
             break;
           case FY:
-            ptr[n] = dely*fpair;
+            ptr[n] = ccely;
             break;
           case FZ:
-            ptr[n] = delz*fpair;
+            ptr[n] = ccelz;
             break;
           case PN:
             ptr[n] = pair->svector[pindex[n]];
@@ -249,7 +295,7 @@ int ComputeGranLocal::compute_pairs(int flag)
 
 /* ---------------------------------------------------------------------- */
 
-void ComputeGranLocal::reallocate(int n)
+void ComputeCoheLocal::reallocate(int n)
 {
   // grow vector or array and indices array
 
@@ -270,7 +316,7 @@ void ComputeGranLocal::reallocate(int n)
    memory usage of local data
 ------------------------------------------------------------------------- */
 
-double ComputeGranLocal::memory_usage()
+double ComputeCoheLocal::memory_usage()
 {
   double bytes = nmax*nvalues * sizeof(double);
   return bytes;

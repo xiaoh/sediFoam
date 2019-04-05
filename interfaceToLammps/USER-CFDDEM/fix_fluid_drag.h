@@ -31,6 +31,7 @@ class FixFluidDrag : public Fix {
   double **DuDt;
   double **vOld;
   int *foamCpuId;
+  int sizein;
 
   FixFluidDrag(class LAMMPS *, int, char **);
   ~FixFluidDrag();
@@ -45,6 +46,7 @@ class FixFluidDrag : public Fix {
   void copy_arrays(int, int, int);
   int pack_exchange(int, double *);
   int unpack_exchange(int, double *);
+  void set_arrays(int);
 
  private:
   double carrier_rho;

@@ -6,7 +6,7 @@ SHELL = /bin/sh
 # compiler/linker settings
 # specify flags and libraries needed for your compiler
 
-CC =		mpic++
+CC =		mpic++ 
 CCFLAGS =	-O2 \
 		-funroll-loops -fstrict-aliasing -Wall -W -Wno-uninitialized
 SHFLAGS =	-fPIC
