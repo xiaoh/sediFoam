@@ -12,6 +12,8 @@ Please send bug reports and comments to the online forum - other users may come 
 
 You can also contact: Heng Xiao (hengxiao@vt.edu) , but reply may be slow. +
 
+[Update April 5, 2019] A branch for microbial community modelling is added. Details will follow.
+
 [bibliography]
 References
 ----------
