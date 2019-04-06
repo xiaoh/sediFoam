@@ -1140,7 +1140,6 @@ void  softParticleCloud::lammpsEvolveForward
 
 void softParticleCloud::delMissingParticles(label tag) {
 
-  // Delete missing particles, does not work for mpi run
   for
   (
       softParticleCloud::iterator pIter = begin();
