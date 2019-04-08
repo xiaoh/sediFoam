@@ -54,7 +54,7 @@ extern "C" {
   /* set atom x&v&foamCpuId for all procs */
   void lammps_put_local_info(void* ptr, int nLocalIn, double* fdrag, 
                              double* DuDt, int* foamCpuIdIn, int* tagIn);
-
+  void lammps_put_local_grid_info(void* ptr, double* gridPU);
   void lammps_step(void* ptr, int n);
   void lammps_set_timestep(void* ptr, double dt_i);
   double lammps_get_timestep(void* ptr);

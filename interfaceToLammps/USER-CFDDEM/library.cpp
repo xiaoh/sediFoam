@@ -22,6 +22,7 @@
 #include "atom.h"
 #include "atom_vec.h"
 #include "fix_fluid_drag.h" // added JS
+#include "fix_bio_kinetics.h"
 #include "modify.h"
 #include "string.h"
 #include "stdio.h"
@@ -363,6 +364,44 @@ void lammps_put_local_info(void* ptr, int nLocalIn, double* fdrag,
     drag_ptr->ffluiddrag[tolmpid][0] = fdrag[3*fromfoamid+0];
     drag_ptr->ffluiddrag[tolmpid][1] = fdrag[3*fromfoamid+1];
     drag_ptr->ffluiddrag[tolmpid][2] = fdrag[3*fromfoamid+2];
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+// Provide grid info to Lammps
+// Incompatible with MPI communication!
+void lammps_put_local_grid_info(void* ptr, double* gridPU)
+{
+  LAMMPS *lammps = (LAMMPS *) ptr;
+  // the pointer to the fix_kinetics class
+  class FixKinetics *kinetics_ptr = NULL;
+
+  int i;
+  for (i = 0; i < (lammps->modify->nfix); i++) {
+    if(strcmp(lammps->modify->fix[i]->style, "kinetics") == 0) {
+      kinetics_ptr = (FixKinetics *) lammps->modify->fix[i];
+      break;
+    }
+  }
+
+  if (kinetics_ptr != NULL) {
+    for (int i = 0; i < kinetics_ptr->ngrids; i++) {
+      double x = gridPU[i*6];
+      double y = gridPU[i*6+1];
+      double z = gridPU[i*6+2];
+
+      int ix = x / kinetics_ptr->stepx;
+      int iy = y / kinetics_ptr->stepy;
+      int iz = z / kinetics_ptr->stepz;
+
+      int ind = iz * kinetics_ptr->nx * kinetics_ptr->ny + iy * kinetics_ptr->nx + ix;
+
+      kinetics_ptr->fv[0][ind] = gridPU[i*6+3];
+      kinetics_ptr->fv[1][ind] = gridPU[i*6+4];
+      kinetics_ptr->fv[2][ind] = gridPU[i*6+5];
+
+    //  printf("id = %i, i = %i %e %e %e \n", ind, i, gridPU[i*6+3], gridPU[i*6+4], gridPU[i*6+5]);
+    }
   }
 }
 

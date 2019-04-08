@@ -46,7 +46,6 @@ FixCohe::FixCohe(LAMMPS *lmp, int narg, char **arg) :
   smax = atof(arg[6]);
   opt = atoi(arg[7]);
 
-  printf("ah lam smin opt %g %g %g %i \n", ah, lam, smin,opt);
   nmax = 0;
   nvalues = 7;   // Number of output columns : PID FX FY FZ NX NY NZ
   laststep = -1;
@@ -237,11 +236,11 @@ void FixCohe::post_force(int vflag)
 	    r = sqrt(rsq);
 	    del = r - radsum;
 	    if (del > smin)
-	      ccel = - ah*pow(radsum,6)/6.0/del/del/(r + radsum)/(r + radsum)
-		/r/r/r;
+	      ccel = - ah*pow(radsum,6)/6.0/del/del/(r + radsum)/(r + radsum)/r/r/r;
 	    else 
-	      ccel = - ah*pow(radsum,6)/6.0/smin/smin/(smin+ 2.0*radsum)/(smin + 2.0*radsum)
-		/(smin + radsum)/(smin + radsum)/(smin + radsum);
+	      ccel = 0;
+	     // ccel = - ah*pow(radsum,6)/6.0/smin/smin/(smin+ 2.0*radsum)/(smin + 2.0*radsum)
+	//	/(smin + radsum)/(smin + radsum)/(smin + radsum);
 	    rinv = 1/r;
 
 	    ccelx = delx*ccel*rinv;
@@ -311,7 +310,7 @@ int FixCohe::count_pairs(int flag)
  // double *special_coul = force->special_coul;
  // double *special_lj = force->special_lj;
 // Invoke half neighbor list (will copy or build if necessary)  
-  if (flag == 0) neighbor->build_one(list->index);
+  if (flag == 0) neighbor->build_one(list);
 
   inum = list->inum;
   ilist = list->ilist;
@@ -489,8 +488,9 @@ else if (opt ==1){
 	      ccel = - ah*pow(radsum,6)/6.0/del/del/(r + radsum)/(r + radsum)
 		/r/r/r;
 	    else 
-	      ccel = - ah*pow(radsum,6)/6.0/smin/smin/(smin+ 2.0*radsum)/(smin + 2.0*radsum)
-		/(smin + radsum)/(smin + radsum)/(smin + radsum);
+	      ccel = 0;
+//	      ccel = - ah*pow(radsum,6)/6.0/smin/smin/(smin+ 2.0*radsum)/(smin + 2.0*radsum)
+//		/(smin + radsum)/(smin + radsum)/(smin + radsum);
 	    rinv = 1/r;
 
 	    ccelx = delx*ccel*rinv;

@@ -17,10 +17,10 @@
                          Dave Heine (Corning), polydispersity
 ------------------------------------------------------------------------- */
 
-#include "math.h"
-#include "stdio.h"
-#include "stdlib.h"
-#include "string.h"
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "pair_lubricate_poly.h"
 #include "atom.h"
 #include "atom_vec.h"
@@ -65,13 +65,13 @@ PairLubricatePoly::PairLubricatePoly(LAMMPS *lmp) : PairLubricate(lmp)
 void PairLubricatePoly::compute(int eflag, int vflag)
 {
   int i,j,ii,jj,inum,jnum,itype,jtype;
-  double xtmp,ytmp,ztmp,delx,dely,delz,fpair,fx,fy,fz,tx,ty,tz;
-  double rsq,r,h_sep,h_sepj,beta0,beta1,betaj,betaj1,radi,radj,tfmag;
+  double xtmp,ytmp,ztmp,delx,dely,delz,fx,fy,fz,tx,ty,tz;
+  double rsq,r,h_sep,beta0,beta1,radi,radj;
   double vr1,vr2,vr3,vnnr,vn1,vn2,vn3;
   double vt1,vt2,vt3,wt1,wt2,wt3,wdotn;
-  double inertia,inv_inertia,vRS0;
+  double vRS0;
   double vi[3],vj[3],wi[3],wj[3],xl[3],jl[3];
-  double a_sq,a_sh,a_pu,Fbmag,del,delmin,eta;
+  double a_sq,a_sh,a_pu;
   int *ilist,*jlist,*numneigh,**firstneigh;
   double lamda[3],vstream[3];
 
@@ -84,16 +84,11 @@ void PairLubricatePoly::compute(int eflag, int vflag)
   double **v = atom->v;
   double **f = atom->f;
   double **omega = atom->omega;
-  double **angmom = atom->angmom;
   double **torque = atom->torque;
   double *radius = atom->radius;
-  double *mass = atom->mass;
-  double *rmass = atom->rmass;
   int *type = atom->type;
   int nlocal = atom->nlocal;
   int newton_pair = force->newton_pair;
-
-  int overlaps = 0;
 
   inum = list->inum;
   ilist = list->ilist;
@@ -231,6 +226,8 @@ void PairLubricatePoly::compute(int eflag, int vflag)
 
     for (jj = 0; jj < jnum; jj++) {
       j = jlist[jj];
+      j &= NEIGHMASK;
+
       delx = xtmp - x[j][0];
       dely = ytmp - x[j][1];
       delz = ztmp - x[j][2];
@@ -285,16 +282,10 @@ void PairLubricatePoly::compute(int eflag, int vflag)
 
         h_sep = r - radi-radj;
 
-        // check for overlaps
-
-        if (h_sep < 0.0) overlaps++;
-
         // if less than the minimum gap use the minimum gap instead
 
         if (r < cut_inner[itype][jtype])
-          h_sep = 100*radi+100*radj;
-          // Modified by Rui
-          // h_sep = cut_inner[itype][jtype] - radi-radj;
+          h_sep = cut_inner[itype][jtype] - radi-radj;
 
         // scale h_sep by radi
 
@@ -317,9 +308,15 @@ void PairLubricatePoly::compute(int eflag, int vflag)
                        16.0*pow(beta0,4.0))/375.0/pow(beta1,4.0) *
             h_sep*log(1.0/h_sep);
           a_sh *= 6.0*MY_PI*mu*radi;
-          a_pu = beta0*(4.0+beta0)/10.0/beta1/beta1*log(1.0/h_sep);
-          a_pu += (32.0-33.0*beta0+83.0*beta0*beta0+43.0 *
-                   pow(beta0,3.0))/250.0/pow(beta1,3.0)*h_sep*log(1.0/h_sep);
+          // old invalid eq for pumping term
+          // changed 29Jul16 from eq 9.25 -> 9.27 in Kim and Karilla
+//          a_pu = beta0*(4.0+beta0)/10.0/beta1/beta1*log(1.0/h_sep);
+//          a_pu += (32.0-33.0*beta0+83.0*beta0*beta0+43.0 *
+//                   pow(beta0,3.0))/250.0/pow(beta1,3.0)*h_sep*log(1.0/h_sep);
+//          a_pu *= 8.0*MY_PI*mu*pow(radi,3.0);
+          a_pu = 2.0*beta0/5.0/beta1*log(1.0/h_sep);
+          a_pu += 2.0*(8.0+6.0*beta0+33.0*beta0*beta0)/125.0/beta1/beta1*
+                   h_sep*log(1.0/h_sep);
           a_pu *= 8.0*MY_PI*mu*pow(radi,3.0);
         } else a_sq = 6.0*MY_PI*mu*radi*(beta0*beta0/beta1/beta1/h_sep);
 
@@ -431,16 +428,6 @@ void PairLubricatePoly::compute(int eflag, int vflag)
       omega[i][2] -= 0.5*h_rate[5];
     }
   }
-
-  // to DEBUG: set print_overlaps to 1
-
-  int print_overlaps = 0;
-  if (print_overlaps) {
-    int overlaps_all;
-    MPI_Allreduce(&overlaps,&overlaps_all,1,MPI_INT,MPI_SUM,world);
-    if (overlaps_all && comm->me == 0)
-      printf("Number of overlaps = %d\n",overlaps);
-  }
 }
 
 /* ----------------------------------------------------------------------
@@ -461,14 +448,13 @@ void PairLubricatePoly::init_style()
   // for pair hybrid, should limit test to types using the pair style
 
   double *radius = atom->radius;
-  int *type = atom->type;
   int nlocal = atom->nlocal;
 
   for (int i = 0; i < nlocal; i++)
     if (radius[i] == 0.0)
       error->one(FLERR,"Pair lubricate/poly requires extended particles");
 
-  int irequest = neighbor->request(this);
+  int irequest = neighbor->request(this,instance_me);
   neighbor->requests[irequest]->half = 0;
   neighbor->requests[irequest]->full = 1;
 
@@ -493,7 +479,7 @@ void PairLubricatePoly::init_style()
                    "fix deform remap option");
     }
     if (strstr(modify->fix[i]->style,"wall") != NULL) {
-      if (flagwall) 
+      if (flagwall)
         error->all(FLERR,
                    "Cannot use multiple fix wall commands with "
                    "pair lubricate/poly");

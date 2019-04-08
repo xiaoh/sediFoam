@@ -6,7 +6,7 @@ cd ${0%/*} || exit 1 # Run from this directory
 echo "Installing lammpsFoam (for mac/linux).."
 currentDir=$PWD
 echo "Enter the directory of your LAMMPS and press [ENTER] "
-echo -n "(default directory ./lammps-1Feb14): "
+echo -n "(default directory ./lammps-5Nov16): "
 read lammpsDir
 
 # Determine if the directory of LAMMPS exists or not.
@@ -14,7 +14,7 @@ read lammpsDir
 if [ ! -d "$lammpsDir" ]
 then
     echo "Directory NOT found! Use default directory instead."
-    lammpsDir="$PWD/lammps-1Feb14"
+    lammpsDir="$PWD/lammps-5Nov16"
 fi
 
 cd $lammpsDir
@@ -25,10 +25,12 @@ echo "Directory of LAMMPS is: " $lammpsDir
 # Copy/link all the extra implementations
 cd $lammpsDir/src
 lammpsSRC=$PWD
-echo $lammpsSRC
-ln -sf $currentDir/interfaceToLammps/*.* . 
-cd $lammpsDir/src/MAKE
-ln -sf $currentDir/interfaceToLammps/MAKE/*.* .
+
+echo "Copying packages to LAMMPS.."
+cp -rf $currentDir/interfaceToLammps/MAKE $lammpsSRC/
+cp -rf $currentDir/interfaceToLammps/USER-CFDDEM $lammpsSRC/
+cp -rf $currentDir/interfaceToLammps/Makefile $lammpsSRC/
+cp -rf $currentDir/interfaceToLammps/lib/* $lammpsDir/lib/
 
 # Make STUBS 
 cd $lammpsDir/src/STUBS
@@ -50,9 +52,7 @@ version=`uname`
 if [ $version == "Linux" ]
 then
     echo "The version you choose is openmpi version"
-    make shanghailinux
-    make makeshlib
-    make -f Makefile.shlib shanghailinux
+    make -j4 shanghailinux mode=shlib
     cd $FOAM_USER_LIBBIN
     ln -sf $lammpsDir/src/liblammps_shanghailinux.so .
     cd $currentDir/lammpsFoam
@@ -62,9 +62,7 @@ then
 elif [ $version == "Darwin" ]
 then
     echo "The version you choose is mac version"
-    make shanghaimac
-    make makeshlib
-    make -f Makefile.shlib shanghaimac
+    make -j4 shanghaimac mode=shlib
     cd $FOAM_USER_LIBBIN
     ln -sf $lammpsDir/src/liblammps_shanghaimac.so .
     cd $currentDir/lammpsFoam

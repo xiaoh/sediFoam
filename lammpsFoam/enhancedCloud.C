@@ -739,7 +739,8 @@ void enhancedCloud::evolve()
             lmpCpuIdLocal,
             pDrag_,
             pDuDt_,
-            nstep
+            nstep,
+            UfSmoothed_
         );
 
         // update position/velocity of all particles in this cloud.

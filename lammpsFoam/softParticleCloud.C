@@ -30,6 +30,7 @@ License
 #include "tensorList.H"
 #include <string.h>
 #include "mpi.h"
+
 using std::string;
 
 namespace Foam
@@ -699,7 +700,8 @@ void  softParticleCloud::lammpsEvolveForward
     int* lmpCpuIdLocal,
     vectorList FLocal,
     vectorList DuDtLocal,
-    int nstep
+    int nstep,
+    volVectorField &UfSmoothed_
 )
 {
     label nprocs = Pstream::nProcs();
@@ -820,6 +822,26 @@ void  softParticleCloud::lammpsEvolveForward
 
     addAndDeleteParticle();
 
+    // send field info to lammps.
+    // not support for mpi run.
+    if (nprocs == 1) {
+      double* toLmpCellPUArray_ = new double[6 * UfSmoothed_.size()];
+
+      forAll(UfSmoothed_.internalField(), ceI)
+      {
+        toLmpCellPUArray_[6 * ceI] = mesh_.C()[ceI][0];
+        toLmpCellPUArray_[6 * ceI + 1] = mesh_.C()[ceI][1];
+        toLmpCellPUArray_[6 * ceI + 2] = mesh_.C()[ceI][2];
+        toLmpCellPUArray_[6 * ceI + 3] = UfSmoothed_[ceI][0];
+        toLmpCellPUArray_[6 * ceI + 4] = UfSmoothed_[ceI][1];
+        toLmpCellPUArray_[6 * ceI + 5] = UfSmoothed_[ceI][2];
+      }
+
+      lammps_put_local_grid_info(lmp_, toLmpCellPUArray_);
+
+      delete[] toLmpCellPUArray_;
+    }
+
     if (contiguous<vector>())
     {
         // Pout<< "contiguous vector is true." << endl;
@@ -888,6 +910,10 @@ void  softParticleCloud::lammpsEvolveForward
     cpuTimeSplit_[3] += runTime_.elapsedCpuTime() - t0;
     t0 = runTime_.elapsedCpuTime();
 
+    int lmpNLocal = lammps_get_local_n(lmp_);
+    label lmpNGlobalin = lmpNLocal;
+    reduce(lmpNGlobalin, sumOp<label>());
+
     // Ask lammps to move certain steps forward
     Info<< "LAMMPS evolving.. " << endl;
     lammps_step(lmp_, nstep);
@@ -897,7 +923,9 @@ void  softParticleCloud::lammpsEvolveForward
     t0 = runTime_.elapsedCpuTime();
     // Start getting information from LAMMPS
     // Harvest the number of particles in each lmp cpu
-    int lmpNLocal = lammps_get_local_n(lmp_);
+    lmpNLocal = lammps_get_local_n(lmp_);
+    label lmpNGlobalout = lmpNLocal;
+    reduce(lmpNGlobalout, sumOp<label>());
 
     label lmpNGlobal = lmpNLocal;
     reduce(lmpNGlobal, sumOp<label>());
@@ -1061,11 +1089,26 @@ void  softParticleCloud::lammpsEvolveForward
     sortedOrder(fromFoamTagList, sortedFromFoamTag);
     sortedOrder(toFoamTagList, sortedToFoamTag);
 
+    // remove missing particles cause by lammps fix wall
+    if(lmpNGlobalin != lmpNGlobalout) {
+      for(label i = 0; i < nList; i++)
+      {
+        int exist = 0;
+        for(label j = 0; j < nList; j++)
+        {
+          if ((toFoamTagList[j] == fromFoamTagList[i])) {
+            exist = 1;
+            break;
+          }
+        }
+        if(!exist) delMissingParticles(fromFoamTagList[i]);
+      }
+    }
+
     for(label i = 0; i < nList; i++)
     {
         label fromI = sortedFromFoamTag[i];
         label toI = sortedToFoamTag[i];
-
         // position
         XLocal[fromI] =
             vector
@@ -1094,6 +1137,23 @@ void  softParticleCloud::lammpsEvolveForward
     Info<< "LAMMPS evolving finished! .. " << endl;
 } // Job done; Proceed to next fluid calculation step.
 
+
+void softParticleCloud::delMissingParticles(label tag) {
+
+  for
+  (
+      softParticleCloud::iterator pIter = begin();
+      pIter != end();
+      ++pIter
+  )
+  {
+      softParticle& p = pIter();
+      if (tag == p.ptag()) {
+        deleteParticle(p);
+        break;
+      }
+  }
+}
 
 // Add new particles in OpenFOAM
 void softParticleCloud::addNewParticles()
