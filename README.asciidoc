@@ -6,11 +6,18 @@ SediFoam is a hybrid CFD--DEM solver for particle-laden flows based on two open-
 
 More information can be found at the https://github.com/xiaoh/sediFoam/wiki[wiki pages] of this site.
 
-Development: Rui Sun (2013-present), Heng Xiao (2008-present), Jin Sun (University of Edinburgh, 2008-2010), Prashant Gupta (P&G) +
+Development: Rui Sun (2013-2019), Heng Xiao (2008-2017), Jin Sun (University of Edinburgh, 2008-2010), Prashant Gupta (P&G) +
 
 Please send bug reports and comments to the online forum - other users may come to help.
 
 You can also contact: Heng Xiao (hengxiao@vt.edu) , but reply may be slow. +
+
+If you use sediFoam, you can cite the following paper:
+
+- R. Sun and H. Xiao. 'SediFoam: A general-purpose, open-source CFD-DEM solver for particle-laden flows with emphasis on sediment transport'. Computers and Geosciences, 89, 207-219, 2016. https://doi.org/10.1016/j.cageo.2016.01.011[DOI:10.1016/j.cageo.2016.01.011]
+
+Other papers that have used ``SediFoam'' can be found below.
+
 
 [bibliography]
 References
@@ -22,7 +29,6 @@ References
 
 - [[[Sun2017irregular]]] R. Sun, H. Xiao and H. Sun. Realistic representation of grain shapes in CFD-DEM simulations of sediment transport with a bonded-sphere approach. Advances in Water Resources. 107, 421-438, 2017. https://doi.org/10.1016/j.advwatres.2017.04.015[DOI: 10.1016/j.advwatres.2017.04.015]
 
-- [[[Sun2016]]] R. Sun and H. Xiao. 'SediFoam: A general-purpose, open-source CFD-DEM solver for particle-laden flows with emphasis on sediment transport'. Computers and Geosciences, 89, 207-219, 2016. https://doi.org/10.1016/j.cageo.2016.01.011[DOI:10.1016/j.cageo.2016.01.011]
 
 - [[[Sun2015a]]] R. Sun and H. Xiao. 'Diffusion-Based Coarse Graining in Hybrid Continuum–Discrete Solvers: Theoretical Formulation and A Priori Tests'. International Journal of Multiphase Flow, 77, 142-157, 2015. https://doi.org/10.1016/j.ijmultiphaseflow.2015.08.014[DOI:10.1016/j.ijmultiphaseflow.2015.08.014]. Also available at http://arxiv.org/abs/1409.0001[arxiv:1409.0001]
 
