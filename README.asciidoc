@@ -8,15 +8,11 @@ More information can be found at the https://github.com/xiaoh/sediFoam/wiki[wiki
 
 Development: Rui Sun (2013-2019), Heng Xiao (2008-2017), Jin Sun (University of Edinburgh, 2008-2010), Prashant Gupta (P&G) +
 
-Please send bug reports and comments to the online forum - other users may come to help.
-
-You can also contact: Heng Xiao (hengxiao@vt.edu) , but reply may be slow. +
+Please send bug reports and comments to the online forum - other users may come to help.  You can also contact: Heng Xiao (hengxiao@vt.edu) , but reply may be slow. +
 
 If you use sediFoam, you can cite the following paper:
 
 - R. Sun and H. Xiao. 'SediFoam: A general-purpose, open-source CFD-DEM solver for particle-laden flows with emphasis on sediment transport'. Computers and Geosciences, 89, 207-219, 2016. https://doi.org/10.1016/j.cageo.2016.01.011[DOI:10.1016/j.cageo.2016.01.011]
-
-Other papers that have used ``SediFoam'' can be found below.
 
 
 [bibliography]
