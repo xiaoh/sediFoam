@@ -500,7 +500,8 @@ void lammps_delete_particle(void *ptr, int* deleteList, int nDelete)
   int i,j,m,iwhichglobal,iwhichlocal;
   int ndel,ndeltopo[4];
   int *list,*mark;
-
+  int del_flag = 0;
+   
   // grow list and mark arrays if necessary
 
   int nmax = 0;
@@ -510,6 +511,7 @@ void lammps_delete_particle(void *ptr, int* deleteList, int nDelete)
     nmax = lammps->atom->nmax;
     lammps->memory->create(list,nmax,"evaporate:list");
     lammps->memory->create(mark,nmax,"evaporate:mark");
+    del_flag = 1;
   }
 
   // ncount = # of deletable atoms in region that I own
@@ -611,5 +613,9 @@ void lammps_delete_particle(void *ptr, int* deleteList, int nDelete)
 
   // ndeleted += ndel;
   // next_reneighbor = update->ntimestep + nevery;
-  // delete [] random;
+  delete random;
+  if (del_flag) {
+    lammps->memory->destroy(list);
+    lammps->memory->destroy(mark);
+  }
 }
